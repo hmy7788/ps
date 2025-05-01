@@ -1,9 +1,7 @@
 #include <string>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
-
 
 string solution(string X, string Y) {
     vector<int> countX(10, 0);
@@ -25,7 +23,4 @@ string solution(string X, string Y) {
     if(answer.size() == 0) return "-1";
     if(answer[0] == '0') return "0";
     else return answer;
-    
-    
-    
 }
