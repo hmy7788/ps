@@ -1,6 +1,1 @@
-def solution(array, height):
-    cnt = 0
-    for h in array:
-        if h > height:
-            cnt += 1
-    return cnt
+solution = lambda array, height : sum(1 for a in array if a > height)
