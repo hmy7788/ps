@@ -1,1 +1,1 @@
-solution = lambda age : 2022 - age + 1
+solution = lambda age : 2023 - age
