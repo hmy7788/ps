@@ -1,34 +1,20 @@
 from collections import deque
-
-def bfs(maps):
-    n, m = len(maps), len(maps[0])
-    dq = deque()
-    dq.append((0,0))
-    dx = [-1, 1, 0, 0]
-    dy = [0, 0, -1, 1]
-    
-    while dq:
-        x, y = dq.popleft()
-        
-        for i in range(4):
-            nx = x + dx[i]
-            ny = y + dy[i]
-            
-            # 범위 체크
-            if nx < 0 or nx >= n or ny < 0 or ny >= m:
-                continue
-            
-            # 벽 체크
-            if maps[nx][ny] == 0: continue
-                
-            if maps[nx][ny] == 1:
-                maps[nx][ny] = maps[x][y] + 1
-                dq.append((nx, ny))
-                
-    answer = maps[n-1][m-1]
-    if answer == 1: return -1
-    else: return answer
-            
             
 def solution(maps):
-    return bfs(maps)
+    y, x = len(maps), len(maps[0])
+    dq = deque()
+    dq.append((0, 0))
+    v = [[0 for _ in range(x)] for _ in range(y)] 
+    v[0][0] = 1
+    
+    while dq:
+        cy, cx = dq.popleft()
+        for dy, dx in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
+            ny, nx = cy+dy, cx+dx
+            if 0 <= ny < y and 0 <= nx < x and maps[ny][nx] != 0 and v[ny][nx] == 0:
+                maps[ny][nx] = maps[cy][cx] + 1
+                dq.append((ny, nx))
+                v[ny][nx] = 1
+    
+    answer = maps[y-1][x-1]
+    return answer if answer != 1 else -1
