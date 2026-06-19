@@ -1,10 +1,10 @@
 # [level 2] 혼자 놀기의 달인 - 131130 
 
-[문제 링크](https://school.programmers.co.kr/learn/courses/30/lessons/131130) 
+[문제 링크](https://school.programmers.co.kr/learn/courses/30/lessons/131130?language=python3) 
 
 ### 성능 요약
 
-메모리: 4.22 MB, 시간: 0.03 ms
+메모리: 11.5 MB, 시간: 0.02 ms
 
 ### 구분
 
@@ -16,7 +16,7 @@
 
 ### 제출 일자
 
-2025년 04월 29일 17:45:20
+2026년 06월 19일 21:29:30
 
 ### 문제 설명
 
