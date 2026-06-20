@@ -11,10 +11,10 @@ def bfs(g, n, start_node):
         while dq:
             nodes = dq.popleft()
             
-            for n in nodes:
-                if v[n] == 0:
-                    v[n] = 1
-                    dq.append(g[n])
+            for neighbor in nodes:
+                if v[neighbor] == 0:
+                    v[neighbor] = 1
+                    dq.append(g[neighbor])
                     cnt += 1
 
         return cnt
@@ -30,14 +30,17 @@ def solution(n, wires):
         
     min_diff = float('inf')
     for edge in wires:
-        node1, node2 = edge[0], edge[1]
-        g = copy.deepcopy(G)
-        g[node1].remove(node2)
-        g[node2].remove(node1)
+        v1, v2 = edge[0], edge[1]
+        # g = copy.deepcopy(G)    # deepcopy를 쓰면 느려진대
+        G[v1].remove(v2)
+        G[v2].remove(v1)
         
-        nw1_cnt = bfs(g, n, node1)
-        nw2_cnt = bfs(g, n, node2)
+        nw1_cnt = bfs(G, n, v1)
+        nw2_cnt = n - nw1_cnt
         diff = abs(nw1_cnt - nw2_cnt)
+        
+        G[v1].append(v2)
+        G[v2].append(v1)
         
         if diff == 0: return 0
         if min_diff > diff: min_diff = diff
