@@ -1,39 +1,20 @@
-def make_math1(n):
-    math1 = [1,2,3,4,5]
-    math1 = math1 * ((n//5)+1)
-    return math1[:n]
-
-def make_math2(n):
-    math2 = [2,1,2,3,2,4,2,5]
-    math2 = math2 * ((n//8)+1)
-    return math2[:n]
-
-def make_math3(n):
-    math3 = [3,3,1,1,2,2,4,4,5,5]
-    math3 = math3 * ((n//10)+1)
-    return math3[:n]
-    
 def solution(answers):
-    n = len(answers)
-    math1 = make_math1(n)
-    math2 = make_math2(n)
-    math3 = make_math3(n)
-    counting = [0, 0, 0]
-    answer = []
+    math1 = [1,2,3,4,5]
+    math2 = [2,1,2,3,2,4,2,5]
+    math3 = [3,3,1,1,2,2,4,4,5,5]
     
-    for i in range(n):
-        if(math1[i] == answers[i]): counting[0] += 1
-        if(math2[i] == answers[i]): counting[1] += 1
-        if(math3[i] == answers[i]): counting[2] += 1
-        
-    print(counting)
-    hs = max(counting)
+    scores = [0, 0, 0]
+    
+    for i in range(len(answers)):
+        if answers[i] == math1[i%5]: scores[0] += 1
+        if answers[i] == math2[i%8]: scores[1] += 1
+        if answers[i] == math3[i%10]: scores[2] += 1
+    
+    max_score = max(scores)
+    result = []
     
     for i in range(3):
-        if(max(counting) == counting[i]):
-            answer.append(i+1)
-        
-    print(math1)
-    print(math2)
-    print(math3)
-    return answer
+        if max_score == scores[i]:
+            result.append(i+1)
+            
+    return result
