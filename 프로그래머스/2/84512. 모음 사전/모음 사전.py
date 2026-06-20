@@ -4,7 +4,6 @@ sys.setrecursionlimit(10**6)
 alphabets = 'AEIOU'
 
 def solution(word):
-    s = ''
     d = []
     
     def dfs(w):
