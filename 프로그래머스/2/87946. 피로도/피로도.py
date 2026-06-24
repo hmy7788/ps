@@ -1,18 +1,3 @@
-order = []
-
-def make_permutation(perm, n):
-    if len(perm) == n:
-        order.append(perm[:])
-        return
-    
-    for i in range(n):
-        if v[i] == 0:
-            perm.append(i)
-            v[i] = 1
-            make_permutation(perm, n)
-            perm.pop()
-            v[i] = 0
-
 def solution(k, dungeons):
     n = len(dungeons)
     order = []
