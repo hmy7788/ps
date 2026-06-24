@@ -1,41 +1,56 @@
-orders = []
+order = []
 
-def check_max_cnt(orders, k, dungeons):
-    max_cnt = -1
-    
-    for o in orders:
-        cnt = 0
-        current_k = k
-        for idx in o:
-            if current_k >= dungeons[idx][0]:
-                current_k -= dungeons[idx][1]
-                cnt += 1
-            else:
-                break
-                
-        if max_cnt < cnt:
-            max_cnt = cnt
-    
-    return max_cnt
-
-
-def dfs(current_path, n, visited):
-    if len(current_path) == n:
-        orders.append(current_path[:])
+def make_permutation(perm, n):
+    if len(perm) == n:
+        order.append(perm[:])
         return
     
     for i in range(n):
-        if visited[i] == 0:
-            visited[i] = 1
-            current_path.append(i)
-            dfs(current_path, n, visited)
-            current_path.pop()
-            visited[i] = 0
+        if v[i] == 0:
+            perm.append(i)
+            v[i] = 1
+            make_permutation(perm, n)
+            perm.pop()
+            v[i] = 0
 
-            
 def solution(k, dungeons):
     n = len(dungeons)
-    visited = [0] * n
-    dfs([], n, visited)
+    order = []
+    v = [0] * n
     
-    return check_max_cnt(orders, k, dungeons)
+    def make_permutation(perm):
+        if len(perm) == n:
+            order.append(perm[:])
+            return
+        
+        for i in range(n):
+            if v[i] == 0:
+                perm.append(i)
+                v[i] = 1
+                make_permutation(perm)
+                perm.pop()
+                v[i] = 0
+    
+    max_cnt = float('-inf')
+    make_permutation([])
+    
+    for p in order:
+        current_piro = k
+        cnt = 0
+        
+        for idx in p:
+            need_piro = dungeons[idx][0]
+            consume_piro = dungeons[idx][1]
+            
+            if current_piro >= need_piro:
+                current_piro -= consume_piro
+                cnt += 1
+            else:
+                break
+        
+        if max_cnt < cnt:
+            max_cnt = cnt
+            
+    return max_cnt
+    
+    return max_cnt
