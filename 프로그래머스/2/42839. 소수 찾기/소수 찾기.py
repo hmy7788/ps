@@ -1,33 +1,34 @@
 def is_prime(n):
-    if n == 0 or n == 1:
-        return False
-    
-    for i in range(2, n):
-        if n % i == 0: return False
-    return True
-
-
-def dfs(current_str, visited, numbers, result_set):
-    if current_str != "":
-        result_set.add(int(current_str))
-    
-    for i in range(len(numbers)):
-        if visited[i] == 0:
-            visited[i] = 1
-            dfs(current_str+numbers[i], visited, numbers, result_set)
-            visited[i] = 0
+    if n < 2: return False
+        
+    for i in range(2, int(n**(1/2))+1):
+        if n % i == 0:
+            return False
+        
+    return True    
 
 
 def solution(numbers):
     n = len(numbers)
-    result_set = set()
-    visited = [0 for _ in range(n)]
+    order = set()
+    v = [0] * n
+    
+    def make_permutation(current_str):
+        if len(current_str) == n:
+            order.add(int(current_str))
+            return
+        
+        for i in range(n):
+            if v[i] == 0:
+                order.add(int(current_str+numbers[i]))
+                v[i] = 1
+                make_permutation(current_str+numbers[i])
+                v[i] = 0
+    
+    make_permutation('')
     cnt = 0
     
-    dfs("", visited, numbers, result_set)
-    # print(result_set)
-    
-    for num in result_set:
-        if is_prime(num): cnt += 1
+    for n in order:
+        if is_prime(n): cnt += 1
     
     return cnt
