@@ -1,39 +1,75 @@
-from itertools import permutations
+def solution1(w, h, dst_nodes): # 완전 탐색으로 푼 문제
+    perms = []
+    n = len(dst_nodes)
+    v = [0] * n
 
-def node_to_xy(w, h, node):
-    st = 1
-    for i in range(h):
-        for j in range(w):
-            if st == node:
-                return i, j
-            st += 1
-
-def distance(n1, n2):
-    n1_x, n1_y = n1[0], n1[1]
-    n2_x, n2_y = n2[0], n2[1]
-
-    return abs(n1_x-n2_x) + abs(n1_y-n2_y)
-
-def solution(w, h, dst_nodes):
+    def dfs(current_perm):
+        if len(current_perm) == n:
+            perms.append(current_perm[:])
+            return 
+        
+        for i in range(n):
+            node = dst_nodes[i]
+            if v[i] == 0:
+                current_perm.append(node)
+                v[i] = 1
+                dfs(current_perm)
+                current_perm.pop()
+                v[i] = 0
     
+    dfs([])
+
+    def calc_distance(i, j):
+        iy, ix = (i-1)//w, (i-1)%w
+        jy, jx = (j-1)//w, (j-1)%w
+
+        return abs(iy-jy) + abs(ix-jx)
+
     min_dist = float('inf')
-    root = None
-    for perm in permutations(dst_nodes):
-        perm = list(perm)
-        perm.insert(0, 1)
+
+    for p in perms:
+        route = [1] + p
         dist = 0
-        for i in range(len(dst_nodes)):
-            dist += distance(n1= node_to_xy(w, h, perm[i]), n2=node_to_xy(w, h, perm[i+1]))
-            
-        if dist < min_dist:
+        for i in range(1, len(route)):
+            dist += calc_distance(route[i-1], route[i])
+        
+        if min_dist > dist:
             min_dist = dist
-            root = perm
+
+    return min_dist
+
+
+def solution2(w, h, dst_nodes):
+    nodes = [1] + dst_nodes
+    n = len(nodes)
+
+    dp = [[-1 for _ in range(2**n)] for _ in range(n)]
+
+    def calc_distance(i, j):
+        iy, ix = (i-1)//w, (i-1)%w
+        jy, jx = (j-1)//w, (j-1)%w
+        return abs(iy-jy)+abs(ix-jx)
     
-    print(f'최소 거리: {min_dist}')
-    print(f"최소 경로: {' -> '.join(map(str, root))}")
-    print()
+    def dfs(curr, visited):
+        if visited == n:
+            return 0
+        
+        if dp[curr][visited] != -1:
+            return dp[curr][visited]
+
+        min_dist = float('inf')
+
+        for next_node in range(n):
+            pass
+
 
 if __name__ == '__main__':
-    solution(5, 2, [5, 8])
-    solution(5, 5, [3, 23])
-    solution(5, 5, [4, 7, 9, 14, 17, 20, 25])
+    print('완전 탐색으로 푼 문제: O(N!)')
+    print(solution1(5, 2, [5, 8]))
+    print(solution1(5, 5, [3, 23]))
+    print(solution1(5, 5, [4, 7, 9, 14, 17, 20, 25]))
+
+    print('\n비트마스킹 + dp로 푼 문제: O(N^2 * 2^N)')
+    print(solution2(5, 2, [5, 8]))
+    print(solution2(5, 5, [3, 23]))
+    print(solution2(5, 5, [4, 7, 9, 14, 17, 20, 25]))
