@@ -1,22 +1,24 @@
 def solution(cards):
-    n = len(cards)
+    cards = [-1] + cards
+    v = [-1 for _ in range(len(cards))]
     groups = []
-    v = [0] * n
+
+    def dfs(current):
+        if v[current] != -1:
+            groups.append(g)
+            return
+        
+        g.append(cards[current])
+        next = cards[current]
+        v[current] = 1
+        dfs(next)
+
+    for i in range(1, len(cards)):
+        if v[i] == -1:
+            g = []
+            dfs(i)
     
-    for i in range(n):
-        if v[i] == 0:   # 방문 안했을때
-            count = 0
-            curr = i
-            
-            while v[curr] == 0: 
-                v[curr] = 1
-                curr = cards[curr]-1
-                count += 1
-                
-            groups.append(count)
-    
-    if len(groups) == 1:
-        return 0
-    else:
-        groups.sort()
-        return groups[-1] * groups[-2]
+    groups.sort(key=lambda x:len(x))
+
+    if len(groups) == 1: return 0
+    return len(groups[-1]) * len(groups[-2])
