@@ -1,0 +1,7 @@
+all_problems/
+.venv/
+problems.db
+__pycache__/
+*.pyc
+.env
+testcases/
