@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PS Platform</title>
+<link rel="stylesheet" href="/static/common.css">
+<link rel="stylesheet" href="/static/problem.css">
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="/">← 목록</a>
+  <div id="prob-title-header">로딩 중...</div>
+  <span class="badge" id="prob-badge"></span>
+  <span class="meta-chip" id="prob-time"></span>
+  <span class="meta-chip" id="prob-mem"></span>
+  <span class="meta-chip" id="prob-users"></span>
+</header>
+
+<div id="layout">
+  <!-- 왼쪽: 문제 설명 -->
+  <div id="prob-desc">
+    <div class="section-title">문제</div>
+    <div id="desc-body"></div>
+    <div class="section-title">입력</div>
+    <div id="desc-input"></div>
+    <div class="section-title">출력</div>
+    <div id="desc-output"></div>
+    <div class="section-title">예제</div>
+    <div id="desc-samples"></div>
+  </div>
+
+  <!-- 오른쪽: 에디터 -->
+  <div id="editor-side">
+    <div id="editor-toolbar">
+      <span>Python 3</span>
+    </div>
+    <div id="editor-container"></div>
+    <div id="bottom-panel">
+      <div id="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('run')">실행</button>
+        <button class="tab-btn" onclick="switchTab('submit')">제출</button>
+      </div>
+
+      <!-- 실행 탭 -->
+      <div id="run-panel" class="tab-content active">
+        <div id="run-toolbar">
+          <button id="run-all-btn" onclick="runAll()">▶▶ 전체 실행</button>
+          <span id="run-summary"></span>
+          <button id="add-tc-btn" onclick="addTestCase()">+ 테케 추가</button>
+        </div>
+        <div id="testcase-list"></div>
+      </div>
+
+      <!-- 제출 탭 -->
+      <div id="submit-panel" class="tab-content">
+        <div id="submit-toolbar">
+          <button id="gen-tc-btn" onclick="generateTestcases()">🧪 채점용 테케 만들기</button>
+          <span id="tc-gen-status"></span>
+          <button id="submit-btn" onclick="submitCode()" disabled>▶ 제출</button>
+        </div>
+        <div id="submit-results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/common.js"></script>
+<script>var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } };</script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/editor/editor.main.nls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/editor/editor.main.js"></script>
+<script>
+let editor = null;
+let currentProblem = null;
+
+const problemId = new URLSearchParams(location.search).get('id');
+if (!problemId) location.href = '/';
+
+require(['vs/editor/editor.main'], () => {
+  editor = monaco.editor.create(document.getElementById('editor-container'), {
+    value: '',
+    language: 'python',
+    theme: 'vs-dark',
+    fontSize: 14,
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    fontFamily: "'Cascadia Code','Fira Code',Consolas,monospace",
+    tabSize: 4,
+  });
+  loadProblem();
+});
+
+async function loadProblem() {
+  const p = await fetch(`/api/problems/${problemId}`).then(r => r.json());
+  currentProblem = p;
+  document.title = `#${p.id} ${p.title} - PS Platform`;
+
+  document.getElementById('prob-title-header').textContent = `#${p.id} ${p.title}`;
+  const badge = document.getElementById('prob-badge');
+  badge.textContent = LV_LABEL[p.level];
+  badge.className = `badge ${lvClass(p.level)}`;
+  document.getElementById('prob-time').textContent  = `⏱ ${p.time_limit}`;
+  document.getElementById('prob-mem').textContent   = `💾 ${p.memory_limit}`;
+  const users = document.getElementById('prob-users');
+  if (p.accepted_user_count) {
+    users.textContent = `✅ ${p.accepted_user_count.toLocaleString()}명`;
+  } else {
+    users.style.display = 'none';
+  }
+
+  document.getElementById('desc-body').innerHTML   = p.description;
+  document.getElementById('desc-input').innerHTML  = p.input_desc;
+  document.getElementById('desc-output').innerHTML = p.output_desc;
+
+  const samplesEl = document.getElementById('desc-samples');
+  if (p.samples.length) {
+    samplesEl.innerHTML = p.samples.map((s, i) => `
+      <div class="samples-wrap">
+        <div class="sample-block">
+          <label>입력 ${i+1}</label>
+          <pre>${escHtml(s.input.trimEnd())}</pre>
+        </div>
+        <div class="sample-block">
+          <label>출력 ${i+1}</label>
+          <pre>${escHtml(s.output.trimEnd())}</pre>
+        </div>
+      </div>`).join('');
+  } else {
+    samplesEl.innerHTML = '<span style="color:var(--text-dim)">예제 없음</span>';
+  }
+
+  if (editor) {
+    editor.setValue(
+      `def solution():\n    pass\n\n\nif __name__ == "__main__":\n    import sys\n    data = sys.stdin.read()\n    # TODO: 입력 파싱 후 solution() 호출\n`
+    );
+  }
+
+  initTestCases(p.samples);
+  loadSavedTestcases();
+}
+
+/* ── 테스트케이스 관리 ───────────────────────────── */
+let testCases = [];
+
+function syncFromDom() {
+  testCases.forEach((tc, i) => {
+    const inEl  = document.getElementById(`tc-in-${i}`);
+    const expEl = document.getElementById(`tc-exp-${i}`);
+    if (inEl)  tc.input    = inEl.value;
+    if (expEl) tc.expected = expEl.value;
+  });
+}
+
+function renderTestCases() {
+  syncFromDom();
+  const passed = testCases.filter(tc => tc.result === 'ok').length;
+  const done   = testCases.filter(tc => tc.result !== null).length;
+  document.getElementById('run-summary').textContent =
+    done > 0 ? `${passed} / ${done} 통과` : '';
+
+  document.getElementById('testcase-list').innerHTML = testCases.map((tc, i) => `
+    <div class="tc-item">
+      <div class="tc-hdr">
+        <span class="tc-lbl">${escHtml(tc.label)}</span>
+        <span class="tc-badge ${tc.result === 'ok' ? 'tc-ok' : tc.result === 'fail' ? 'tc-fail' : ''}">
+          ${tc.result === 'ok' ? `✅ 정답${tc.elapsed != null ? ` (${tc.elapsed}ms)` : ''}` :
+            tc.result === 'fail' ? '❌ 오답' : ''}
+        </span>
+        <button class="tc-run-btn" onclick="runOne(${i})">▶ 실행</button>
+        <button class="tc-del-btn" onclick="delTestCase(${i})">✕</button>
+      </div>
+      <div class="tc-body">
+        <div class="tc-cols">
+          <div>
+            <div class="tc-col-label">입력</div>
+            <textarea class="tc-ta" id="tc-in-${i}">${escHtml(tc.input)}</textarea>
+          </div>
+          <div>
+            <div class="tc-col-label">기대 출력</div>
+            <textarea class="tc-ta" id="tc-exp-${i}">${escHtml(tc.expected)}</textarea>
+          </div>
+        </div>
+        ${tc.result !== null ? `
+        <div>
+          <div class="tc-col-label">실제 출력</div>
+          <pre class="tc-actual-pre ${tc.result}">${escHtml(tc.actual)}</pre>
+        </div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function initTestCases(samples) {
+  testCases = samples.map((s, i) => ({
+    label: `샘플 ${i + 1}`,
+    input: s.input.trimEnd(),
+    expected: s.output.trimEnd(),
+    result: null,
+    actual: '',
+    elapsed: null,
+  }));
+  renderTestCases();
+}
+
+async function runOne(idx) {
+  if (!editor || !currentProblem) return;
+  syncFromDom();
+  const tc = testCases[idx];
+
+  const btn = document.querySelector(`#testcase-list .tc-item:nth-child(${idx + 1}) .tc-run-btn`);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: editor.getValue(),
+        stdin: tc.input,
+        time_limit: currentProblem.time_limit,
+      }),
+    });
+    const d = await res.json();
+    const actual = (d.stdout || '').trimEnd();
+    tc.actual  = actual;
+    tc.elapsed = d.elapsed_ms ?? null;
+    tc.result  = actual === tc.expected.trimEnd() ? 'ok' : 'fail';
+  } catch (e) {
+    tc.result = 'fail';
+    tc.actual = '서버 오류';
+    tc.elapsed = null;
+  }
+  renderTestCases();
+}
+
+async function runAll() {
+  if (!editor || !currentProblem) return;
+  const btn = document.getElementById('run-all-btn');
+  btn.disabled = true;
+  for (let i = 0; i < testCases.length; i++) await runOne(i);
+  btn.disabled = false;
+}
+
+function addTestCase() {
+  syncFromDom();
+  const n = testCases.filter(tc => tc.label.startsWith('커스텀')).length + 1;
+  testCases.push({ label: `커스텀 ${n}`, input: '', expected: '', result: null, actual: '', elapsed: null });
+  renderTestCases();
+}
+
+function delTestCase(idx) {
+  syncFromDom();
+  testCases.splice(idx, 1);
+  renderTestCases();
+}
+
+/* ── 탭 전환 ─────────────────────────────────────────── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'run') || (i === 1 && tab === 'submit'));
+  });
+  document.getElementById('run-panel').classList.toggle('active', tab === 'run');
+  document.getElementById('submit-panel').classList.toggle('active', tab === 'submit');
+}
+
+/* ── 채점용 테케 생성 ────────────────────────────────── */
+async function generateTestcases() {
+  if (!currentProblem) return;
+  const btn    = document.getElementById('gen-tc-btn');
+  const status = document.getElementById('tc-gen-status');
+  btn.disabled = true;
+  btn.textContent = '생성 중...';
+  status.textContent = '';
+  status.className = '';
+
+  try {
+    const res = await fetch(`/api/problems/${currentProblem.id}/generate-testcases`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '생성 실패');
+    }
+    const data = await res.json();
+    status.textContent = `✅ ${data.count}개 생성 완료`;
+    status.className = 'tc-gen-ok';
+    document.getElementById('submit-btn').disabled = false;
+    renderSubmitResults([]);
+  } catch (e) {
+    status.textContent = `❌ ${e.message}`;
+    status.className = 'tc-gen-err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🧪 다시 생성';
+  }
+}
+
+/* ── 제출 ────────────────────────────────────────────── */
+async function submitCode() {
+  if (!editor || !currentProblem) return;
+  const btn    = document.getElementById('submit-btn');
+  const status = document.getElementById('tc-gen-status');
+  btn.disabled = true;
+  btn.textContent = '채점 중...';
+  renderSubmitResults(null); // loading state
+
+  try {
+    const res = await fetch(`/api/problems/${currentProblem.id}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: editor.getValue(),
+        time_limit: currentProblem.time_limit,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '제출 실패');
+    }
+    const data = await res.json();
+    renderSubmitResults(data.results, data.passed, data.total);
+  } catch (e) {
+    document.getElementById('submit-results').innerHTML =
+      `<div class="sr-error">❌ ${escHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ 제출';
+  }
+}
+
+function renderSubmitResults(results, passed, total) {
+  const el = document.getElementById('submit-results');
+  if (results === null) {
+    el.innerHTML = '<div class="sr-loading">채점 중...</div>';
+    return;
+  }
+  if (!results.length) { el.innerHTML = ''; return; }
+
+  const allPass = passed === total;
+  const summaryClass = allPass ? 'sr-all-pass' : passed === 0 ? 'sr-all-fail' : 'sr-partial';
+  const icon = allPass ? '🎉' : passed === 0 ? '❌' : '⚠️';
+
+  el.innerHTML = `
+    <div class="sr-summary ${summaryClass}">${icon} ${passed} / ${total} 통과</div>
+    <div class="sr-list">
+      ${results.map((r, i) => {
+        const badge = r.passed ? '<span class="sr-ok">✅</span>' :
+                      r.status === 'TLE' ? '<span class="sr-tle">⏱ TLE</span>' :
+                      r.status === 'ERROR' ? '<span class="sr-err">💥 ERROR</span>' :
+                      '<span class="sr-err">❌ WA</span>';
+        const time = r.elapsed_ms != null ? `${r.elapsed_ms}ms` : '-';
+        return `<div class="sr-item">
+          <span class="sr-idx">#${i + 1}</span>
+          <span class="sr-type">${r.type}</span>
+          ${badge}
+          <span class="sr-time">${time}</span>
+          <span class="sr-note">${escHtml(r.note)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ── 페이지 로드 시 기존 테케 확인 ──────────────────── */
+async function loadSavedTestcases() {
+  if (!currentProblem) return;
+  try {
+    const res  = await fetch(`/api/problems/${currentProblem.id}/testcases`);
+    const data = await res.json();
+    if (data.exists) {
+      const date = new Date(data.generated_at).toLocaleDateString('ko-KR');
+      document.getElementById('tc-gen-status').textContent = `✅ ${data.count}개 (${date})`;
+      document.getElementById('tc-gen-status').className = 'tc-gen-ok';
+      document.getElementById('gen-tc-btn').textContent = '🧪 다시 생성';
+      document.getElementById('submit-btn').disabled = false;
+    }
+  } catch (_) {}
+}
+</script>
+</body>
+</html>
