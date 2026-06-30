@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PS Platform</title>
+<link rel="stylesheet" href="/static/common.css">
+<link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">PS Platform</div>
+  <input class="search-input" id="search-input" type="text" placeholder="🔍  문제 번호 또는 제목 검색...">
+
+  <div class="filter-wrap">
+    <button class="filter-btn" onclick="toggleDd('dd-tags')">
+      태그 <span class="cnt" id="tag-cnt">0</span> ▾
+    </button>
+    <div class="dropdown" id="dd-tags">
+      <input class="dd-search" type="text" placeholder="태그 검색..." oninput="renderTagList(this.value)">
+      <div class="dd-list" id="tag-list"></div>
+    </div>
+  </div>
+
+  <div class="filter-wrap">
+    <button class="filter-btn" onclick="toggleDd('dd-levels')">
+      레벨 <span class="cnt" id="lv-cnt">0</span> ▾
+    </button>
+    <div class="dropdown" id="dd-levels" style="min-width:170px">
+      <div class="dd-list" id="lv-list"></div>
+    </div>
+  </div>
+</header>
+
+<div id="list-info">로딩 중...</div>
+<div id="problem-grid"></div>
+<div id="pagination"></div>
+
+<script src="/static/common.js"></script>
+<script>
+const st = { q:'', tags:[], levels:[], page:1, size:24, total:0 };
+let allTags = [];
+
+async function loadTags() {
+  allTags = await fetch('/api/tags').then(r => r.json());
+  renderTagList('');
+}
+
+function renderTagList(q) {
+  const filtered = sortTags(allTags).filter(t => (tagKo(t)+t).toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('tag-list').innerHTML = filtered.map(t => `
+    <label>
+      <input type="checkbox" value="${t}" ${st.tags.includes(t)?'checked':''} onchange="onTagChange()">
+      ${tagKo(t)}
+    </label>`).join('');
+}
+
+function onTagChange() {
+  st.tags = [...document.querySelectorAll('#tag-list input:checked')].map(e => e.value);
+  const cnt = document.getElementById('tag-cnt');
+  cnt.textContent = st.tags.length;
+  cnt.classList.toggle('show', st.tags.length > 0);
+  st.page = 1; loadProblems();
+}
+
+(function buildLevelCheckboxes() {
+  const groups = [
+    { label:'Silver', color:'var(--silver)', levels:[6,7,8,9,10] },
+    { label:'Gold',   color:'var(--gold)',   levels:[11,12,13,14,15] },
+    { label:'Platinum', color:'var(--platinum)', levels:[16,17,18,19,20] },
+  ];
+  document.getElementById('lv-list').innerHTML = groups.map(g => `
+    <div class="lv-group-title" style="color:${g.color}">${g.label}</div>
+    ${g.levels.map(l => `<label>
+      <input type="checkbox" value="${l}" onchange="onLvChange()">
+      <span class="badge ${lvClass(l)}">${LV_LABEL[l]}</span>
+    </label>`).join('')}
+  `).join('');
+})();
+
+function onLvChange() {
+  st.levels = [...document.querySelectorAll('#lv-list input:checked')].map(e => Number(e.value));
+  const cnt = document.getElementById('lv-cnt');
+  cnt.textContent = st.levels.length;
+  cnt.classList.toggle('show', st.levels.length > 0);
+  st.page = 1; loadProblems();
+}
+
+async function loadProblems() {
+  const p = new URLSearchParams();
+  if (st.q) p.set('q', st.q);
+  if (st.tags.length)   p.set('tags',   st.tags.join(','));
+  if (st.levels.length) p.set('levels', st.levels.join(','));
+  p.set('page', st.page); p.set('size', st.size);
+
+  const data = await fetch('/api/problems?' + p).then(r => r.json());
+  st.total = data.total;
+  document.getElementById('list-info').textContent = `총 ${data.total.toLocaleString()}개`;
+  renderGrid(data.items);
+  renderPagination();
+}
+
+function renderGrid(items) {
+  const el = document.getElementById('problem-grid');
+  if (!items.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-dim)">검색 결과가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = items.map(p => `
+    <a class="prob-card" href="/problem?id=${p.id}">
+      <div class="card-top">
+        <span class="pid">#${p.id}</span>
+        <span class="ptitle">${escHtml(p.title)}</span>
+        <span class="badge ${lvClass(p.level)}">${LV_LABEL[p.level]}</span>
+      </div>
+      <div class="card-tags">${p.tags.slice(0,4).map(t=>`<span class="tag">${tagKo(t)}</span>`).join('')}</div>
+      <div class="card-meta">
+        <span>⏱ ${p.time_limit}</span>
+        ${p.accepted_user_count ? `<span>✅ ${p.accepted_user_count.toLocaleString()}명</span>` : ''}
+      </div>
+    </a>`).join('');
+}
+
+function renderPagination() {
+  const total = Math.ceil(st.total / st.size);
+  const p = st.page;
+  const el = document.getElementById('pagination');
+  if (total <= 1) { el.innerHTML = ''; return; }
+  let pages = new Set([1, total, p, p-1, p+1].filter(x => x>=1 && x<=total));
+  pages = [...pages].sort((a,b) => a-b);
+  let html = `<button class="pg-btn" onclick="goPage(${p-1})" ${p===1?'disabled':''}>‹</button>`;
+  let prev = 0;
+  for (const pg of pages) {
+    if (pg - prev > 1) html += `<span style="color:var(--text-dim);padding:0 4px">…</span>`;
+    html += `<button class="pg-btn ${pg===p?'cur':''}" onclick="goPage(${pg})">${pg}</button>`;
+    prev = pg;
+  }
+  html += `<button class="pg-btn" onclick="goPage(${p+1})" ${p===total?'disabled':''}>›</button>`;
+  el.innerHTML = html;
+}
+function goPage(p) { st.page = p; loadProblems(); window.scrollTo(0,0); }
+
+function toggleDd(id) {
+  document.querySelectorAll('.dropdown').forEach(el => { if (el.id !== id) el.classList.remove('open'); });
+  document.getElementById(id).classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.filter-wrap')) document.querySelectorAll('.dropdown').forEach(el => el.classList.remove('open'));
+});
+
+let searchTimer;
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { st.q = e.target.value.trim(); st.page = 1; loadProblems(); }, 300);
+});
+
+loadTags();
+loadProblems();
+</script>
+</body>
+</html>
