@@ -389,6 +389,14 @@ async function loadSavedTestcases() {
 async function saveSolution() {
   const btn = document.getElementById('save-solution-btn');
   if (!btn || !editor || !currentProblem) return;
+
+  // 메모 입력 팝업
+  const memo = prompt(
+    '풀이 메모를 입력하세요 (선택, 파일명에 추가됨)\n예: dp, bfs, greedy\n\n비워두면 기본 파일명으로 저장됩니다.',
+    ''
+  );
+  if (memo === null) return; // 취소
+
   btn.disabled = true;
   btn.textContent = '저장 중...';
 
@@ -396,14 +404,14 @@ async function saveSolution() {
     const res = await fetch(`/api/problems/${currentProblem.id}/save-solution`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: editor.getValue() }),
+      body: JSON.stringify({ code: editor.getValue(), memo }),
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || '저장 실패');
     }
     const data = await res.json();
-    btn.textContent = `✅ 저장 완료 (${data.path})`;
+    btn.textContent = `✅ ${data.filename} 저장 완료`;
     btn.style.cursor = 'default';
   } catch (e) {
     btn.disabled = false;
