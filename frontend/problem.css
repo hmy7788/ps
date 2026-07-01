@@ -324,3 +324,80 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .sr-tle  { color: var(--tle); font-weight: 600; min-width: 60px; }
 .sr-time { color: var(--text-dim); min-width: 55px; text-align: right; }
 .sr-note { color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 테케 미리보기 버튼 */
+#view-tc-btn {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#view-tc-btn:hover { border-color: var(--accent); color: var(--accent); }
+#view-tc-btn:disabled { opacity: .4; cursor: default; }
+
+/* 테케 미리보기 패널 */
+#tc-preview {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 0 14px 8px;
+  padding: 8px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.tc-preview-header {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.tc-preview-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 8px 0;
+}
+
+.tc-preview-list { display: flex; flex-direction: column; gap: 10px; }
+
+.tc-preview-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tc-preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.tc-preview-idx  { color: var(--text-dim); min-width: 22px; }
+.tc-preview-type { font-weight: 600; min-width: 70px; }
+.tc-preview-note { color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tc-preview-io {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+}
+.tc-preview-col { background: var(--bg); padding: 6px 10px; }
+
+.tc-preview-pre {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+  max-height: 80px;
+  overflow-y: auto;
+}

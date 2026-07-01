@@ -58,8 +58,10 @@
         <div id="submit-toolbar">
           <button id="gen-tc-btn" onclick="generateTestcases()">🧪 채점용 테케 만들기</button>
           <span id="tc-gen-status"></span>
+          <button id="view-tc-btn" onclick="toggleTestcasePreview()" disabled>📋 테케 확인</button>
           <button id="submit-btn" onclick="submitCode()" disabled>▶ 제출</button>
         </div>
+        <div id="tc-preview" style="display:none"></div>
         <div id="submit-results"></div>
       </div>
     </div>
@@ -270,6 +272,8 @@ async function generateTestcases() {
   if (!currentProblem) return;
   const btn    = document.getElementById('gen-tc-btn');
   const status = document.getElementById('tc-gen-status');
+  if (btn.textContent.includes('다시') &&
+      !confirm('기존 테케를 삭제하고 새로 생성합니다. 계속할까요?')) return;
   btn.disabled = true;
   btn.textContent = '생성 중...';
   status.textContent = '';
@@ -287,6 +291,7 @@ async function generateTestcases() {
     status.textContent = `✅ ${data.count}개 생성 완료`;
     status.className = 'tc-gen-ok';
     document.getElementById('submit-btn').disabled = false;
+    document.getElementById('view-tc-btn').disabled = false;
     renderSubmitResults([]);
   } catch (e) {
     status.textContent = `❌ ${e.message}`;
@@ -374,8 +379,60 @@ async function loadSavedTestcases() {
       document.getElementById('tc-gen-status').className = 'tc-gen-ok';
       document.getElementById('gen-tc-btn').textContent = '🧪 다시 생성';
       document.getElementById('submit-btn').disabled = false;
+      document.getElementById('view-tc-btn').disabled = false;
     }
   } catch (_) {}
+}
+
+/* ── 테케 미리보기 토글 ──────────────────────────────── */
+let tcPreviewOpen = false;
+
+async function toggleTestcasePreview() {
+  const el  = document.getElementById('tc-preview');
+  const btn = document.getElementById('view-tc-btn');
+  if (tcPreviewOpen) {
+    el.style.display = 'none';
+    btn.textContent = '📋 테케 확인';
+    tcPreviewOpen = false;
+    return;
+  }
+  try {
+    const res  = await fetch(`/api/problems/${currentProblem.id}/testcases`);
+    const data = await res.json();
+    if (!data.exists || !data.testcases?.length) {
+      el.innerHTML = '<div class="tc-preview-empty">저장된 테케가 없습니다.</div>';
+    } else {
+      const typeIcon = { general: '📌', edge: '⚠️', stress: '🔥' };
+      el.innerHTML = `
+        <div class="tc-preview-header">채점용 테케 ${data.count}개 (${new Date(data.generated_at).toLocaleDateString('ko-KR')})</div>
+        <div class="tc-preview-list">
+          ${data.testcases.map((tc, i) => `
+            <div class="tc-preview-item">
+              <div class="tc-preview-meta">
+                <span class="tc-preview-idx">#${i + 1}</span>
+                <span class="tc-preview-type">${typeIcon[tc.type] || ''} ${tc.type}</span>
+                <span class="tc-preview-note">${escHtml(tc.note || '')}</span>
+              </div>
+              <div class="tc-preview-io">
+                <div class="tc-preview-col">
+                  <div class="tc-col-label">입력</div>
+                  <pre class="tc-preview-pre">${escHtml(tc.input.trimEnd())}</pre>
+                </div>
+                <div class="tc-preview-col">
+                  <div class="tc-col-label">출력</div>
+                  <pre class="tc-preview-pre">${escHtml(tc.output.trimEnd())}</pre>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+    el.style.display = 'block';
+    btn.textContent = '📋 테케 닫기';
+    tcPreviewOpen = true;
+  } catch (e) {
+    el.innerHTML = `<div class="tc-preview-empty">오류: ${escHtml(e.message)}</div>`;
+    el.style.display = 'block';
+  }
 }
 </script>
 </body>
