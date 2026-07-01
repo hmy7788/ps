@@ -104,7 +104,7 @@ async def generate_testcases(problem_id: int):
 
 output은 반드시 수학적으로 정확해야 합니다.
 
-아래 JSON 배열만 출력하세요 (설명 없이):
+IMPORTANT: Output ONLY a raw JSON array. No explanation, no thinking, no markdown. Start your response with '[' and end with ']'.
 [
   {{"input": "stdin 전체", "output": "stdout 전체", "type": "general|edge|stress", "note": "한줄 설명"}},
   ...
@@ -122,13 +122,24 @@ output은 반드시 수학적으로 정확해야 합니다.
     except Exception as e:
         raise HTTPException(500, f"Claude API 오류: {e}")
 
-    match = re.search(r"\[.*\]", raw, re.DOTALL)
-    if not match:
-        raise HTTPException(500, "테스트케이스 파싱 실패: JSON 배열을 찾을 수 없습니다.")
-    try:
-        testcases = json.loads(match.group())
-    except json.JSONDecodeError as e:
-        raise HTTPException(500, f"JSON 파싱 오류: {e}")
+    # 마크다운 코드 펜스 제거
+    clean = re.sub(r"```(?:json)?\s*", "", raw)
+    clean = re.sub(r"```", "", clean).strip()
+
+    # 오른쪽부터 '[' 위치를 찾아 유효한 JSON 배열 탐색 (추론 텍스트 건너뜀)
+    decoder = json.JSONDecoder()
+    testcases = None
+    for m in reversed(list(re.finditer(r"\[", clean))):
+        try:
+            obj, _ = decoder.raw_decode(clean, m.start())
+            if isinstance(obj, list) and obj and isinstance(obj[0], dict):
+                testcases = obj
+                break
+        except json.JSONDecodeError:
+            continue
+
+    if testcases is None:
+        raise HTTPException(500, f"JSON 파싱 실패. 응답 일부: {clean[-300:]}")
 
     data = {
         "problem_id":   problem_id,
