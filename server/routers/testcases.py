@@ -116,9 +116,12 @@ IMPORTANT: Output ONLY a raw JSON array. No explanation, no thinking, no markdow
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "user",      "content": prompt},
+                {"role": "assistant", "content": "["},
+            ],
         )
-        raw = msg.content[0].text.strip()
+        raw = "[" + msg.content[0].text.strip()
     except Exception as e:
         raise HTTPException(500, f"Claude API 오류: {e}")
 

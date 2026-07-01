@@ -23,7 +23,8 @@ app = FastAPI(title="PS Platform", version="0.1.0")
 
 
 _last_heartbeat: float | None = None
-_HEARTBEAT_TIMEOUT = 20  # 초
+_active_requests: int = 0
+_HEARTBEAT_TIMEOUT = 30  # 초
 
 
 @app.post("/api/heartbeat")
@@ -33,10 +34,22 @@ def heartbeat():
     return {"ok": True}
 
 
+@app.middleware("http")
+async def track_requests(request, call_next):
+    global _active_requests
+    _active_requests += 1
+    try:
+        return await call_next(request)
+    finally:
+        _active_requests -= 1
+
+
 def _watchdog():
     time.sleep(30)  # 첫 연결 대기
     while True:
         time.sleep(5)
+        if _active_requests > 0:
+            continue  # 요청 처리 중이면 카운트 안 함
         if _last_heartbeat and time.time() - _last_heartbeat > _HEARTBEAT_TIMEOUT:
             print("[watchdog] 브라우저 연결 끊김 — 서버 종료")
             os._exit(0)
