@@ -375,3 +375,6 @@ const LV_LABEL = {
 function tagKo(tag) { return TAG_KO[tag] || tag; }
 function lvClass(l) { return l<=10 ? 'lv-silver' : l<=15 ? 'lv-gold' : 'lv-plat'; }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// 하트비트: 5초마다 서버에 생존 신호 전송
+setInterval(() => fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}), 5000);
