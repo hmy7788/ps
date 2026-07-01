@@ -76,6 +76,30 @@ class SaveRequest(BaseModel):
     memo: str = ""
 
 
+@router.get("/problems/{problem_id}/solutions")
+def list_solutions(problem_id: int):
+    import re
+    baekjoon = ROOT / "백준"
+    if not baekjoon.exists():
+        return {"files": []}
+
+    pattern = re.compile(r'^' + str(problem_id) + r'[\.\s]')
+    files = []
+    for grade_dir in baekjoon.iterdir():
+        if not grade_dir.is_dir():
+            continue
+        for folder in grade_dir.iterdir():
+            if folder.is_dir() and pattern.match(folder.name):
+                for py in sorted(folder.glob("*.py"), key=lambda f: f.stat().st_mtime, reverse=True):
+                    files.append({
+                        "filename": py.name,
+                        "mtime":    py.stat().st_mtime,
+                    })
+
+    files.sort(key=lambda f: f["mtime"], reverse=True)
+    return {"files": files}
+
+
 @router.get("/problems/{problem_id}/last-solution")
 def last_solution(problem_id: int):
     import re
@@ -102,6 +126,22 @@ def last_solution(problem_id: int):
         "filename": latest.name,
         "code":     latest.read_text(encoding="utf-8"),
     }
+
+
+@router.get("/problems/{problem_id}/solutions/{filename}")
+def get_solution(problem_id: int, filename: str):
+    import re
+    baekjoon = ROOT / "백준"
+    pattern = re.compile(r'^' + str(problem_id) + r'[\.\s]')
+    for grade_dir in baekjoon.iterdir():
+        if not grade_dir.is_dir():
+            continue
+        for folder in grade_dir.iterdir():
+            if folder.is_dir() and pattern.match(folder.name):
+                f = folder / filename
+                if f.exists() and f.suffix == ".py":
+                    return {"code": f.read_text(encoding="utf-8")}
+    raise HTTPException(404, "파일을 찾을 수 없습니다.")
 
 
 @router.post("/problems/{problem_id}/save-solution")

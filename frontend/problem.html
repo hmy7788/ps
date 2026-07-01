@@ -36,7 +36,9 @@
   <!-- 오른쪽: 에디터 -->
   <div id="editor-side">
     <div id="editor-toolbar">
-      <span>Python 3</span>
+      <span id="toolbar-lang">Python 3</span>
+      <span id="toolbar-file" style="font-size:11px;color:var(--text-dim)"></span>
+      <select id="solution-select" style="display:none" onchange="loadSolutionFile(this.value)"></select>
     </div>
     <div id="editor-container"></div>
     <div id="panel-resizer"></div>
@@ -210,20 +212,45 @@ async function loadProblem() {
   }
 
   if (editor) {
-    const saved = await fetch(`/api/problems/${p.id}/last-solution`).then(r => r.json()).catch(() => null);
-    if (saved?.exists) {
-      editor.setValue(saved.code);
-      document.getElementById('editor-toolbar').querySelector('span').textContent =
-        `Python 3 — ${saved.filename}`;
-    } else {
-      editor.setValue(
-        `def solution():\n    pass\n\n\nif __name__ == "__main__":\n    import sys\n    data = sys.stdin.read()\n    # TODO: 입력 파싱 후 solution() 호출\n`
-      );
-    }
+    await loadSolutionList(p.id);
   }
 
   initTestCases(p.samples);
   loadSavedTestcases();
+}
+
+/* ── 저장된 풀이 파일 목록/로드 ─────────────────────── */
+async function loadSolutionList(problemId) {
+  const data = await fetch(`/api/problems/${problemId}/solutions`).then(r => r.json()).catch(() => null);
+  const files = data?.files ?? [];
+  const sel   = document.getElementById('solution-select');
+  const label = document.getElementById('toolbar-file');
+
+  if (!files.length) {
+    label.textContent = '';
+    sel.style.display = 'none';
+    editor.setValue(
+      `def solution():\n    pass\n\n\nif __name__ == "__main__":\n    import sys\n    data = sys.stdin.read()\n    # TODO: 입력 파싱 후 solution() 호출\n`
+    );
+    return;
+  }
+
+  if (files.length === 1) {
+    sel.style.display = 'none';
+    label.textContent = `— ${files[0].filename}`;
+  } else {
+    label.textContent = '';
+    sel.innerHTML = files.map(f => `<option value="${escHtml(f.filename)}">${escHtml(f.filename)}</option>`).join('');
+    sel.style.display = '';
+  }
+
+  await loadSolutionFile(files[0].filename);
+}
+
+async function loadSolutionFile(filename) {
+  const problemId = new URLSearchParams(location.search).get('id');
+  const data = await fetch(`/api/problems/${problemId}/solutions/${encodeURIComponent(filename)}`).then(r => r.json()).catch(() => null);
+  if (data?.code != null) editor.setValue(data.code);
 }
 
 /* ── textarea 자동 높이 ──────────────────────────── */
