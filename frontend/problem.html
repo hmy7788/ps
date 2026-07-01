@@ -31,6 +31,8 @@
     <div id="desc-samples"></div>
   </div>
 
+  <div id="layout-resizer"></div>
+
   <!-- 오른쪽: 에디터 -->
   <div id="editor-side">
     <div id="editor-toolbar">
@@ -77,6 +79,39 @@
 <script>
 let editor = null;
 let currentProblem = null;
+
+/* ── 좌우 레이아웃 리사이저 ─────────────────────────── */
+(function () {
+  const resizer = document.getElementById('layout-resizer');
+  const left    = document.getElementById('prob-desc');
+  let startX = 0, startW = 0;
+
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    startW = left.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor     = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = e => {
+      const delta = e.clientX - startX;
+      const total = document.getElementById('layout').offsetWidth;
+      const newW  = Math.min(Math.max(startW + delta, 200), total - 300);
+      left.style.width = newW + 'px';
+    };
+
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+})();
 
 /* ── 패널 리사이저 ───────────────────────────────────── */
 (function () {
