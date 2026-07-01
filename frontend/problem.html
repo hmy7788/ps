@@ -181,6 +181,16 @@ async function loadProblem() {
   loadSavedTestcases();
 }
 
+/* ── textarea 자동 높이 ──────────────────────────── */
+function autoResizeTa(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('tc-ta')) autoResizeTa(e.target);
+});
+
 /* ── 테스트케이스 관리 ───────────────────────────── */
 let testCases = [];
 
@@ -229,6 +239,8 @@ function renderTestCases() {
         </div>` : ''}
       </div>
     </div>`).join('');
+
+  document.querySelectorAll('.tc-ta').forEach(autoResizeTa);
 }
 
 function initTestCases(samples) {
