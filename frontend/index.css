@@ -110,6 +110,7 @@ header { position: sticky; top: 0; z-index: 10; }
   color: inherit;
 }
 .prob-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.prob-card.solved { border-left: 3px solid var(--ok); }
 
 .card-top { display: flex; align-items: center; gap: 8px; }
 .pid { font-size: 12px; color: var(--text-dim); }

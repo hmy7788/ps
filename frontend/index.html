@@ -108,7 +108,7 @@ function renderGrid(items) {
     return;
   }
   el.innerHTML = items.map(p => `
-    <a class="prob-card" href="/problem?id=${p.id}">
+    <a class="prob-card${p.solved ? ' solved' : ''}" href="/problem?id=${p.id}">
       <div class="card-top">
         <span class="pid">#${p.id}</span>
         <span class="ptitle">${escHtml(p.title)}</span>

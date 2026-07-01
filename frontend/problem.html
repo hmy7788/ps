@@ -207,9 +207,16 @@ async function loadProblem() {
   }
 
   if (editor) {
-    editor.setValue(
-      `def solution():\n    pass\n\n\nif __name__ == "__main__":\n    import sys\n    data = sys.stdin.read()\n    # TODO: 입력 파싱 후 solution() 호출\n`
-    );
+    const saved = await fetch(`/api/problems/${p.id}/last-solution`).then(r => r.json()).catch(() => null);
+    if (saved?.exists) {
+      editor.setValue(saved.code);
+      document.getElementById('editor-toolbar').querySelector('span').textContent =
+        `Python 3 — ${saved.filename}`;
+    } else {
+      editor.setValue(
+        `def solution():\n    pass\n\n\nif __name__ == "__main__":\n    import sys\n    data = sys.stdin.read()\n    # TODO: 입력 파싱 후 solution() 호출\n`
+      );
+    }
   }
 
   initTestCases(p.samples);

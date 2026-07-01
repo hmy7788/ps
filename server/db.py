@@ -99,6 +99,35 @@ def mark_solved(conn: sqlite3.Connection, problem_id: int) -> None:
     conn.commit()
 
 
+def sync_solved_from_fs(conn: sqlite3.Connection, root: Path) -> int:
+    """백준/ 폴더를 스캔해 풀이 파일이 있는 문제를 solved=1로 동기화. 변경된 수 반환."""
+    import re
+    baekjoon_dir = root / "백준"
+    if not baekjoon_dir.exists():
+        return 0
+    updated = 0
+    seen: set[int] = set()
+    for py_file in baekjoon_dir.rglob("*.py"):
+        folder_name = py_file.parent.name
+        m = re.match(r'^(\d+)', folder_name)
+        if not m:
+            continue
+        problem_id = int(m.group(1))
+        if problem_id in seen:
+            continue
+        seen.add(problem_id)
+        row = conn.execute("SELECT solved FROM problems WHERE id=?", (problem_id,)).fetchone()
+        if row and row["solved"] == 0:
+            mtime = datetime.fromtimestamp(py_file.stat().st_mtime, tz=timezone.utc).isoformat()
+            conn.execute(
+                "UPDATE problems SET solved=1, solved_at=? WHERE id=?",
+                (mtime, problem_id),
+            )
+            updated += 1
+    conn.commit()
+    return updated
+
+
 def get_all_tags(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute("SELECT tag FROM all_tags ORDER BY tag").fetchall()
     return [r["tag"] for r in rows]

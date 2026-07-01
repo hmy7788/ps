@@ -76,6 +76,34 @@ class SaveRequest(BaseModel):
     memo: str = ""
 
 
+@router.get("/problems/{problem_id}/last-solution")
+def last_solution(problem_id: int):
+    import re
+    baekjoon = ROOT / "백준"
+    if not baekjoon.exists():
+        return {"exists": False}
+
+    # 폴더명이 "1010. title" 또는 "1010. title" 등 다양하므로 숫자 prefix로 찾음
+    pattern = re.compile(r'^' + str(problem_id) + r'[\.\s]')
+    all_py: list[Path] = []
+    for grade_dir in baekjoon.iterdir():
+        if not grade_dir.is_dir():
+            continue
+        for folder in grade_dir.iterdir():
+            if folder.is_dir() and pattern.match(folder.name):
+                all_py.extend(folder.glob("*.py"))
+
+    if not all_py:
+        return {"exists": False}
+
+    latest = max(all_py, key=lambda f: f.stat().st_mtime)
+    return {
+        "exists":   True,
+        "filename": latest.name,
+        "code":     latest.read_text(encoding="utf-8"),
+    }
+
+
 @router.post("/problems/{problem_id}/save-solution")
 def save_solution(problem_id: int, req: SaveRequest):
     conn = get_conn()
