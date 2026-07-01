@@ -68,26 +68,26 @@
 ```
 ps/
 ├── all_problems/
-│   └── problems/               # 원본 아카이브 (건드리지 않음)
+│   └── problems/                   # 원본 아카이브 (건드리지 않음)
 ├── scripts/
-│   └── build_index.py          # SQLite 인덱스 생성 (최초 1회) ✅
+│   └── build_index.py              # SQLite 인덱스 생성 (최초 1회) ✅
 ├── server/
-│   ├── main.py                 # FastAPI 앱 진입점 ✅
-│   ├── db.py                   # SQLite 연결/쿼리 ✅
-│   ├── models.py               # Pydantic 모델 ✅
-│   ├── utils.py                # 시간제한 파싱 등 ✅
+│   ├── main.py                     # FastAPI 앱 진입점 ✅
+│   ├── db.py                       # SQLite 연결/쿼리 ✅
+│   ├── models.py                   # Pydantic 모델 ✅
+│   ├── utils.py                    # 시간제한 파싱 등 ✅
 │   └── routers/
-│       ├── problems.py         # 검색/필터 API ✅
-│       ├── run.py              # 코드 실행 API ✅
-│       └── testcases.py        # AI 테케 생성/채점 API ✅
+│       ├── problems.py             # 검색/필터 API ✅
+│       ├── run.py                  # 코드 실행 API ✅
+│       └── testcases.py            # AI 테케 생성/채점 API ✅
 ├── frontend/
-│   ├── common.css / common.js  # 공통 (태그 한글화, 레벨 배지 등) ✅
-│   ├── index.html / index.css  # 문제 목록 페이지 ✅
-│   └── problem.html / problem.css  # 문제 풀이 페이지 ✅
-├── testcases/                  # AI 생성 테케 저장 (gitignore)
+│   ├── common.css, common.js       # 공통 (태그 한글화, 레벨 배지 등) ✅
+│   ├── index.html, index.css       # 문제 목록 페이지 ✅
+│   └── problem.html, problem.css   # 문제 풀이 페이지 ✅
+├── testcases/                      # AI 생성 테케 저장 (gitignore)
 │   └── {id}.json
-├── problems.db                 # SQLite 인덱스 (gitignore)
-├── .env                        # ANTHROPIC_API_KEY (gitignore)
+├── problems.db                     # SQLite 인덱스 (gitignore)
+├── .env                            # ANTHROPIC_API_KEY (gitignore)
 ├── PLAN.md
 └── CLAUDE.md
 ```
@@ -147,3 +147,39 @@ uvicorn server.main:app --reload --port 8000
 | 풀이 저장/불러오기 | 미구현 | localStorage 또는 파일 저장 |
 | 코드 실행 보안 | subprocess + timeout | 샌드박스 없음 (로컬 전용) |
 | 태그 필터 정렬 | 구현 완료 | 코딩테스트 중요도 순 |
+| 풀이 완료 시 백준 폴더 자동 저장 | 미구현 | 아래 참고 |
+
+---
+
+## 풀이 완료 시 백준 폴더 자동 저장
+
+### 흐름
+```
+제출 → 전체 통과 → "백준에 저장" 버튼 노출 → 클릭 → 파일 생성
+```
+
+### 생성 파일
+```
+백준/{난이도}/{id}. {title}/
+  README.md       # BaekjoonHub 포맷 모방
+  {title}.py      # 에디터 코드 그대로 저장
+```
+
+난이도 매핑: 1–5 Bronze / 6–10 Silver / 11–15 Gold / 16–20 Platinum / 21–25 Diamond / 26–30 Ruby
+
+### DB solved 체킹
+
+`problems` 테이블에 컬럼 추가:
+```sql
+ALTER TABLE problems ADD COLUMN solved INTEGER DEFAULT 0;
+ALTER TABLE problems ADD COLUMN solved_at TEXT;
+```
+
+- 저장 시: `UPDATE problems SET solved=1, solved_at=<ISO datetime> WHERE id=?`
+- `build_index.py`는 `INSERT OR IGNORE` 방식이므로 재실행해도 solved 값 유지됨
+- 문제 목록 API(`GET /api/problems`)에서 `solved` 필드 포함해 반환 → 목록에 ✅ 표시
+
+### 추가 API
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/api/problems/{id}/save-solution` | 코드 받아 백준 폴더에 파일 저장 + DB solved 업데이트 |
