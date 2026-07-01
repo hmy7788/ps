@@ -37,6 +37,7 @@
       <span>Python 3</span>
     </div>
     <div id="editor-container"></div>
+    <div id="panel-resizer"></div>
     <div id="bottom-panel">
       <div id="tab-bar">
         <button class="tab-btn active" onclick="switchTab('run')">실행</button>
@@ -76,6 +77,42 @@
 <script>
 let editor = null;
 let currentProblem = null;
+
+/* ── 패널 리사이저 ───────────────────────────────────── */
+(function () {
+  const resizer   = document.getElementById('panel-resizer');
+  const panel     = document.getElementById('bottom-panel');
+  let startY      = 0;
+  let startHeight = 0;
+
+  resizer.addEventListener('mousedown', e => {
+    startY      = e.clientY;
+    startHeight = panel.offsetHeight;
+    resizer.classList.add('dragging');
+    document.body.style.cursor    = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = e => {
+      const delta  = startY - e.clientY;   // 위로 드래그 → 패널 커짐
+      const newH   = Math.min(
+        Math.max(startHeight + delta, 80),
+        window.innerHeight * 0.8
+      );
+      panel.style.height = newH + 'px';
+    };
+
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+})();
 
 const problemId = new URLSearchParams(location.search).get('id');
 if (!problemId) location.href = '/';
