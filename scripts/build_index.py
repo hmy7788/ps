@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS problems (
     time_limit          TEXT,       -- "2 초" 형태 원본 문자열
     memory_limit        TEXT,       -- "128 MB" 형태 원본 문자열
     accepted_user_count INTEGER,
-    average_tries       REAL
+    average_tries       REAL,
+    solved              INTEGER DEFAULT 0,
+    solved_at           TEXT
 );
 
 CREATE TABLE IF NOT EXISTS all_tags (
@@ -104,10 +106,17 @@ def build(conn: sqlite3.Connection, min_level: int, max_level: int) -> None:
 
         conn.execute(
             """
-            INSERT OR REPLACE INTO problems
+            INSERT INTO problems
                 (id, title, level, tags, description, input_desc, output_desc,
                  samples, time_limit, memory_limit, accepted_user_count, average_tries)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title=excluded.title, level=excluded.level, tags=excluded.tags,
+                description=excluded.description, input_desc=excluded.input_desc,
+                output_desc=excluded.output_desc, samples=excluded.samples,
+                time_limit=excluded.time_limit, memory_limit=excluded.memory_limit,
+                accepted_user_count=excluded.accepted_user_count,
+                average_tries=excluded.average_tries
             """,
             (
                 data.get("id"),

@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,17 @@ DB_PATH = Path(__file__).resolve().parent.parent / "problems.db"
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(problems)")}
+    if "solved" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN solved INTEGER DEFAULT 0")
+    if "solved_at" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN solved_at TEXT")
+    conn.commit()
 
 
 def _parse_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -42,7 +53,6 @@ def get_problems(
         params += levels
 
     if tags:
-        # 모든 태그를 AND 조건으로 포함하는 문제만 (tags 컬럼은 JSON 문자열)
         for tag in tags:
             conditions.append("tags LIKE ?")
             params.append(f'%"{tag}"%')
@@ -56,7 +66,8 @@ def get_problems(
     offset = (page - 1) * size
     rows = conn.execute(
         f"""
-        SELECT id, title, level, tags, time_limit, memory_limit, accepted_user_count
+        SELECT id, title, level, tags, time_limit, memory_limit,
+               accepted_user_count, solved
         FROM problems {where}
         ORDER BY level ASC, id ASC
         LIMIT ? OFFSET ?
@@ -71,12 +82,21 @@ def get_problem_detail(conn: sqlite3.Connection, problem_id: int) -> dict | None
     row = conn.execute(
         """
         SELECT id, title, level, tags, description, input_desc, output_desc,
-               samples, time_limit, memory_limit, accepted_user_count, average_tries
+               samples, time_limit, memory_limit, accepted_user_count, average_tries,
+               solved, solved_at
         FROM problems WHERE id = ?
         """,
         (problem_id,),
     ).fetchone()
     return _parse_row(row) if row else None
+
+
+def mark_solved(conn: sqlite3.Connection, problem_id: int) -> None:
+    conn.execute(
+        "UPDATE problems SET solved=1, solved_at=? WHERE id=?",
+        (datetime.now(timezone.utc).isoformat(), problem_id),
+    )
+    conn.commit()
 
 
 def get_all_tags(conn: sqlite3.Connection) -> list[str]:

@@ -10,6 +10,7 @@ class ProblemSummary(BaseModel):
     time_limit: str
     memory_limit: str
     accepted_user_count: int | None
+    solved: int = 0
 
 
 class Sample(BaseModel):
@@ -23,6 +24,7 @@ class ProblemDetail(ProblemSummary):
     output_desc: str
     samples: list[Sample]
     average_tries: float | None
+    solved_at: str | None = None
 
 
 class ProblemListResponse(BaseModel):
