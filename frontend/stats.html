@@ -18,6 +18,27 @@
   <!-- 요약 카드 -->
   <section class="summary-cards" id="summary-cards"></section>
 
+  <!-- 히트맵 -->
+  <div class="stat-box">
+    <div class="stat-box-title-row">
+      <span class="stat-box-title">풀이 히트맵 (최근 1년)</span>
+      <span class="streak-badge" id="streak-badge"></span>
+    </div>
+    <div id="heatmap-wrap">
+      <div class="heatmap-months" id="heatmap-months"></div>
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+      <div class="heatmap-legend">
+        <span>적음</span>
+        <span class="legend-cell lv0"></span>
+        <span class="legend-cell lv1"></span>
+        <span class="legend-cell lv2"></span>
+        <span class="legend-cell lv3"></span>
+        <span class="legend-cell lv4"></span>
+        <span>많음</span>
+      </div>
+    </div>
+  </div>
+
   <div class="stats-grid">
     <!-- 난이도별 분포 -->
     <div class="stat-box">
@@ -51,14 +72,68 @@ const GRADE_RANGES = [
 ];
 
 async function load() {
-  const data = await fetch('/api/stats').then(r => r.json());
-  renderSummary(data);
+  const [data, heatData] = await Promise.all([
+    fetch('/api/stats').then(r => r.json()),
+    fetch('/api/stats/heatmap').then(r => r.json()),
+  ]);
+  renderSummary(data, heatData.streak);
+  renderHeatmap(heatData.heatmap);
   renderLevelChart(data.by_level);
   renderTagChart(data.top_tags);
   renderRecent(data.recent);
 }
 
-function renderSummary(data) {
+function renderHeatmap(heatmap) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  // 1년 전 일요일부터 시작
+  const start = new Date(today);
+  start.setFullYear(start.getFullYear() - 1);
+  start.setDate(start.getDate() - start.getDay()); // 일요일로 맞춤
+
+  const weeks = [];
+  let cur = new Date(start);
+  while (cur <= today) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const iso = cur.toISOString().slice(0, 10);
+      week.push({ date: iso, count: heatmap[iso] ?? 0, future: cur > today });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  // 월 레이블
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  let monthHtml = '';
+  weeks.forEach((week, wi) => {
+    const firstDay = week.find(d => !d.future);
+    if (firstDay && new Date(firstDay.date).getDate() <= 7) {
+      const m = new Date(firstDay.date).getMonth();
+      monthHtml += `<span class="month-label" style="grid-column:${wi+1}">${months[m]}</span>`;
+    }
+  });
+  document.getElementById('heatmap-months').innerHTML = monthHtml;
+  document.getElementById('heatmap-months').style.gridTemplateColumns = `repeat(${weeks.length}, 13px)`;
+
+  // 셀
+  const max = Math.max(...Object.values(heatmap), 1);
+  const gridEl = document.getElementById('heatmap-grid');
+  gridEl.style.gridTemplateColumns = `repeat(${weeks.length}, 13px)`;
+  gridEl.innerHTML = weeks.map(week =>
+    `<div class="heatmap-col">${week.map(day => {
+      if (day.future) return `<div class="hm-cell lv0 future"></div>`;
+      const lv = day.count === 0 ? 0 : day.count === 1 ? 1 : day.count <= 2 ? 2 : day.count <= 4 ? 3 : 4;
+      return `<div class="hm-cell lv${lv}" title="${day.date}: ${day.count}개"></div>`;
+    }).join('')}</div>`
+  ).join('');
+}
+
+function renderSummary(data, streak) {
+  if (streak > 0) {
+    document.getElementById('streak-badge').textContent = `🔥 ${streak}일 연속`;
+  }
+
   const byGrade = GRADE_RANGES.map(g => ({
     ...g,
     count: g.levels.reduce((s, l) => s + (data.by_level[l] ?? 0), 0),

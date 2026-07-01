@@ -137,6 +137,44 @@ def get_all_tags(conn: sqlite3.Connection) -> list[str]:
     return [r["tag"] for r in rows]
 
 
+def get_heatmap_and_streak(conn: sqlite3.Connection) -> dict:
+    rows = conn.execute(
+        "SELECT solved_at FROM problems WHERE solved=1 AND solved_at IS NOT NULL"
+    ).fetchall()
+
+    # 날짜별 카운트 (YYYY-MM-DD)
+    from collections import Counter
+    day_count: Counter = Counter()
+    for row in rows:
+        day = row["solved_at"][:10]
+        day_count[day] += 1
+
+    # 스트릭 계산
+    from datetime import date, timedelta
+    today = date.today()
+    streak = 0
+    d = today
+    while True:
+        if d.isoformat() in day_count:
+            streak += 1
+            d -= timedelta(days=1)
+        elif d == today:
+            # 오늘 안 풀었으면 어제부터 체크
+            d -= timedelta(days=1)
+            if d.isoformat() in day_count:
+                streak += 1
+                d -= timedelta(days=1)
+            else:
+                break
+        else:
+            break
+
+    return {
+        "heatmap": dict(day_count),
+        "streak":  streak,
+    }
+
+
 def get_stats(conn: sqlite3.Connection) -> dict:
     # 총 풀었던 수
     total = conn.execute("SELECT COUNT(*) FROM problems WHERE solved=1").fetchone()[0]

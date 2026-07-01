@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 import sqlite3
 
-from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats
+from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats, get_heatmap_and_streak
 from server.models import ProblemListResponse, ProblemDetail, ProblemSummary
 
 PROBLEMS_DIR = Path(__file__).resolve().parent.parent.parent / "all_problems" / "problems"
@@ -79,3 +79,8 @@ def list_tags(conn: sqlite3.Connection = Depends(db)):
 @router.get("/stats")
 def stats(conn: sqlite3.Connection = Depends(db)):
     return get_stats(conn)
+
+
+@router.get("/stats/heatmap")
+def heatmap(conn: sqlite3.Connection = Depends(db)):
+    return get_heatmap_and_streak(conn)
