@@ -3,9 +3,5 @@ problems.db
 __pycache__/
 *.pyc
 .env
-<<<<<<< HEAD
 run.ps1
-=======
-run.ps1
-.claude/
->>>>>>> f1bfd44cf (add: 복습 시스템 구축 (스케줄, 테스트 노트북, 알고리즘 가이드 정리))
+.claude
