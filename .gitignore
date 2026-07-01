@@ -3,5 +3,4 @@ problems.db
 __pycache__/
 *.pyc
 .env
-testcases/
 run.ps1
