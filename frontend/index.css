@@ -17,6 +17,20 @@ header { position: sticky; top: 0; z-index: 10; }
 }
 .search-input:focus { border-color: var(--accent); }
 
+/* 풀었던 문제만 필터 */
+.solved-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.solved-filter-label input { accent-color: var(--ok); cursor: pointer; }
+.solved-filter-label:has(input:checked) { color: var(--ok); }
+
 /* 필터 드롭다운 */
 .filter-wrap { position: relative; }
 

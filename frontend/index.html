@@ -31,6 +31,11 @@
       <div class="dd-list" id="lv-list"></div>
     </div>
   </div>
+
+  <label class="solved-filter-label">
+    <input type="checkbox" id="solved-only-chk" onchange="onSolvedChange()">
+    풀었던 문제만
+  </label>
 </header>
 
 <div id="list-info">로딩 중...</div>
@@ -39,7 +44,7 @@
 
 <script src="/static/common.js"></script>
 <script>
-const st = { q:'', tags:[], levels:[], page:1, size:24, total:0 };
+const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false };
 let allTags = [];
 
 async function loadTags() {
@@ -87,11 +92,17 @@ function onLvChange() {
   st.page = 1; loadProblems();
 }
 
+function onSolvedChange() {
+  st.solvedOnly = document.getElementById('solved-only-chk').checked;
+  st.page = 1; loadProblems();
+}
+
 async function loadProblems() {
   const p = new URLSearchParams();
   if (st.q) p.set('q', st.q);
   if (st.tags.length)   p.set('tags',   st.tags.join(','));
   if (st.levels.length) p.set('levels', st.levels.join(','));
+  if (st.solvedOnly)    p.set('solved', '1');
   p.set('page', st.page); p.set('size', st.size);
 
   const data = await fetch('/api/problems?' + p).then(r => r.json());
@@ -108,7 +119,7 @@ function renderGrid(items) {
     return;
   }
   el.innerHTML = items.map(p => `
-    <a class="prob-card${p.solved ? ' solved' : ''}" href="/problem?id=${p.id}">
+    <a class="prob-card${p.solved ? ' solved' : ''}" href="/problem?id=${p.id}&page=${st.page}">
       <div class="card-top">
         <span class="pid">#${p.id}</span>
         <span class="ptitle">${escHtml(p.title)}</span>
@@ -154,6 +165,9 @@ document.getElementById('search-input').addEventListener('input', e => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => { st.q = e.target.value.trim(); st.page = 1; loadProblems(); }, 300);
 });
+
+const _initPage = new URLSearchParams(location.search).get('page');
+if (_initPage) st.page = parseInt(_initPage) || 1;
 
 loadTags();
 loadProblems();

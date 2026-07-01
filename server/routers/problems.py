@@ -37,12 +37,13 @@ def list_problems(
     levels: str | None = Query(None, description="레벨 콤마 구분, 예: 6,7,8,9,10"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    solved: int | None = Query(None, description="1이면 푼 문제만"),
     conn: sqlite3.Connection = Depends(db),
 ):
     tag_list = [t.strip() for t in tags.split(",")] if tags else []
     level_list = [int(l.strip()) for l in levels.split(",")] if levels else []
 
-    total, items = get_problems(conn, q, tag_list, level_list, page, size)
+    total, items = get_problems(conn, q, tag_list, level_list, page, size, solved_only=(solved == 1))
     return ProblemListResponse(
         total=total,
         page=page,

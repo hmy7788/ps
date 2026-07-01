@@ -10,7 +10,7 @@
 <body>
 
 <header>
-  <a class="back-btn" href="/">← 목록</a>
+  <a class="back-btn" id="back-btn" href="/">← 목록</a>
   <div id="prob-title-header">로딩 중...</div>
   <span class="badge" id="prob-badge"></span>
   <span class="meta-chip" id="prob-time"></span>
@@ -149,8 +149,11 @@ let currentProblem = null;
   });
 })();
 
-const problemId = new URLSearchParams(location.search).get('id');
+const _qs = new URLSearchParams(location.search);
+const problemId = _qs.get('id');
 if (!problemId) location.href = '/';
+const _page = _qs.get('page');
+if (_page) document.getElementById('back-btn').href = `/?page=${_page}`;
 
 require(['vs/editor/editor.main'], () => {
   editor = monaco.editor.create(document.getElementById('editor-container'), {

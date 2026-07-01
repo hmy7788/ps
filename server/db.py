@@ -38,6 +38,7 @@ def get_problems(
     levels: list[int],
     page: int,
     size: int,
+    solved_only: bool = False,
 ) -> tuple[int, list[dict]]:
     conditions: list[str] = []
     params: list[Any] = []
@@ -56,6 +57,9 @@ def get_problems(
         for tag in tags:
             conditions.append("tags LIKE ?")
             params.append(f'%"{tag}"%')
+
+    if solved_only:
+        conditions.append("solved = 1")
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
