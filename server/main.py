@@ -51,7 +51,7 @@ def _watchdog():
         if _active_requests > 0:
             continue  # 요청 처리 중이면 카운트 안 함
         if _last_heartbeat and time.time() - _last_heartbeat > _HEARTBEAT_TIMEOUT:
-            print("[watchdog] 브라우저 연결 끊김 — 서버 종료")
+            print("[watchdog] 브라우저 연결 끊김 - 서버 종료")
             os._exit(0)
 
 

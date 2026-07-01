@@ -104,11 +104,31 @@ async def generate_testcases(problem_id: int):
 
 output은 반드시 수학적으로 정확해야 합니다.
 
-IMPORTANT: Output ONLY a raw JSON array. No explanation, no thinking, no markdown. Start your response with '[' and end with ']'.
-[
-  {{"input": "stdin 전체", "output": "stdout 전체", "type": "general|edge|stress", "note": "한줄 설명"}},
-  ...
-]"""
+테스트케이스를 생성했으면 submit_testcases 도구를 호출해서 결과를 전달하세요."""
+
+    tool = {
+        "name": "submit_testcases",
+        "description": "생성한 테스트케이스 목록을 제출한다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "testcases": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "input":  {"type": "string"},
+                            "output": {"type": "string"},
+                            "type":   {"type": "string", "enum": ["general", "edge", "stress"]},
+                            "note":   {"type": "string"},
+                        },
+                        "required": ["input", "output", "type", "note"],
+                    },
+                },
+            },
+            "required": ["testcases"],
+        },
+    }
 
     try:
         import anthropic
@@ -116,33 +136,21 @@ IMPORTANT: Output ONLY a raw JSON array. No explanation, no thinking, no markdow
         msg = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=4096,
-            messages=[
-                {"role": "user",      "content": prompt},
-                {"role": "assistant", "content": "["},
-            ],
+            tools=[tool],
+            tool_choice={"type": "tool", "name": "submit_testcases"},
+            messages=[{"role": "user", "content": prompt}],
         )
-        raw = "[" + msg.content[0].text.strip()
     except Exception as e:
         raise HTTPException(500, f"Claude API 오류: {e}")
 
-    # 마크다운 코드 펜스 제거
-    clean = re.sub(r"```(?:json)?\s*", "", raw)
-    clean = re.sub(r"```", "", clean).strip()
-
-    # 오른쪽부터 '[' 위치를 찾아 유효한 JSON 배열 탐색 (추론 텍스트 건너뜀)
-    decoder = json.JSONDecoder()
     testcases = None
-    for m in reversed(list(re.finditer(r"\[", clean))):
-        try:
-            obj, _ = decoder.raw_decode(clean, m.start())
-            if isinstance(obj, list) and obj and isinstance(obj[0], dict):
-                testcases = obj
-                break
-        except json.JSONDecodeError:
-            continue
+    for block in msg.content:
+        if block.type == "tool_use" and block.name == "submit_testcases":
+            testcases = block.input.get("testcases")
+            break
 
-    if testcases is None:
-        raise HTTPException(500, f"JSON 파싱 실패. 응답 일부: {clean[-300:]}")
+    if not testcases:
+        raise HTTPException(500, "테스트케이스 생성 실패: 모델이 도구를 호출하지 않았습니다.")
 
     data = {
         "problem_id":   problem_id,
