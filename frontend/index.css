@@ -17,6 +17,18 @@ header { position: sticky; top: 0; z-index: 10; }
 }
 .search-input:focus { border-color: var(--accent); }
 
+/* 통계 링크 */
+.stats-link {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.stats-link:hover { color: var(--accent); border-color: var(--accent); }
+
 /* 풀었던 문제만 필터 */
 .solved-filter-label {
   display: flex;

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통계 - PS Platform</title>
+<link rel="stylesheet" href="/static/common.css">
+<link rel="stylesheet" href="/static/stats.css">
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="/">← 목록</a>
+  <div class="logo">📊 내 풀이 통계</div>
+</header>
+
+<main>
+  <!-- 요약 카드 -->
+  <section class="summary-cards" id="summary-cards"></section>
+
+  <div class="stats-grid">
+    <!-- 난이도별 분포 -->
+    <div class="stat-box">
+      <div class="stat-box-title">난이도별 분포</div>
+      <div id="level-chart"></div>
+    </div>
+
+    <!-- 태그 Top 10 -->
+    <div class="stat-box">
+      <div class="stat-box-title">많이 푼 태그 Top 10</div>
+      <div id="tag-chart"></div>
+    </div>
+  </div>
+
+  <!-- 최근 풀이 -->
+  <div class="stat-box recent-box">
+    <div class="stat-box-title">최근 풀이</div>
+    <div id="recent-list"></div>
+  </div>
+</main>
+
+<script src="/static/common.js"></script>
+<script>
+const GRADE_RANGES = [
+  { label: 'Bronze',   levels: [1,2,3,4,5],        cls: 'bronze' },
+  { label: 'Silver',   levels: [6,7,8,9,10],        cls: 'silver' },
+  { label: 'Gold',     levels: [11,12,13,14,15],    cls: 'gold' },
+  { label: 'Platinum', levels: [16,17,18,19,20],    cls: 'platinum' },
+  { label: 'Diamond',  levels: [21,22,23,24,25],    cls: 'diamond' },
+  { label: 'Ruby',     levels: [26,27,28,29,30],    cls: 'ruby' },
+];
+
+async function load() {
+  const data = await fetch('/api/stats').then(r => r.json());
+  renderSummary(data);
+  renderLevelChart(data.by_level);
+  renderTagChart(data.top_tags);
+  renderRecent(data.recent);
+}
+
+function renderSummary(data) {
+  const byGrade = GRADE_RANGES.map(g => ({
+    ...g,
+    count: g.levels.reduce((s, l) => s + (data.by_level[l] ?? 0), 0),
+  })).filter(g => g.count > 0);
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="summary-card total">
+      <div class="sc-num">${data.total}</div>
+      <div class="sc-label">총 풀었던 문제</div>
+    </div>
+    ${byGrade.map(g => `
+      <div class="summary-card">
+        <div class="sc-num ${g.cls}">${g.count}</div>
+        <div class="sc-label">${g.label}</div>
+      </div>`).join('')}`;
+}
+
+function renderLevelChart(byLevel) {
+  const grades = GRADE_RANGES.map(g => ({
+    ...g,
+    count: g.levels.reduce((s, l) => s + (byLevel[l] ?? 0), 0),
+  })).filter(g => g.count > 0);
+
+  const max = Math.max(...grades.map(g => g.count), 1);
+  document.getElementById('level-chart').innerHTML = grades.map(g => `
+    <div class="bar-row">
+      <div class="bar-label">${g.label}</div>
+      <div class="bar-track">
+        <div class="bar-fill ${g.cls}" style="width:${(g.count / max * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="bar-val">${g.count}</div>
+    </div>`).join('');
+}
+
+function renderTagChart(topTags) {
+  if (!topTags.length) {
+    document.getElementById('tag-chart').innerHTML = '<div class="empty">데이터 없음</div>';
+    return;
+  }
+  const max = topTags[0].count;
+  document.getElementById('tag-chart').innerHTML = topTags.map(t => `
+    <div class="bar-row">
+      <div class="bar-label">${tagKo(t.tag)}</div>
+      <div class="bar-track">
+        <div class="bar-fill accent" style="width:${(t.count / max * 100).toFixed(1)}%"></div>
+      </div>
+      <div class="bar-val">${t.count}</div>
+    </div>`).join('');
+}
+
+function renderRecent(recent) {
+  if (!recent.length) {
+    document.getElementById('recent-list').innerHTML = '<div class="empty">아직 기록이 없습니다.</div>';
+    return;
+  }
+  document.getElementById('recent-list').innerHTML = recent.map(r => {
+    const date = r.solved_at ? new Date(r.solved_at).toLocaleDateString('ko-KR', { month:'short', day:'numeric' }) : '';
+    return `
+      <a class="recent-item" href="/problem?id=${r.id}">
+        <span class="recent-date">${date}</span>
+        <span class="badge ${lvClass(r.level)}">${LV_LABEL[r.level]}</span>
+        <span class="recent-title">#${r.id} ${escHtml(r.title)}</span>
+      </a>`;
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>

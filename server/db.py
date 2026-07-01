@@ -135,3 +135,37 @@ def sync_solved_from_fs(conn: sqlite3.Connection, root: Path) -> int:
 def get_all_tags(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute("SELECT tag FROM all_tags ORDER BY tag").fetchall()
     return [r["tag"] for r in rows]
+
+
+def get_stats(conn: sqlite3.Connection) -> dict:
+    # 총 풀었던 수
+    total = conn.execute("SELECT COUNT(*) FROM problems WHERE solved=1").fetchone()[0]
+
+    # 레벨별 분포
+    rows = conn.execute(
+        "SELECT level, COUNT(*) as cnt FROM problems WHERE solved=1 GROUP BY level ORDER BY level"
+    ).fetchall()
+    by_level = {r["level"]: r["cnt"] for r in rows}
+
+    # 태그 분포 (풀었던 문제의 태그 집계)
+    solved_rows = conn.execute("SELECT tags FROM problems WHERE solved=1").fetchall()
+    tag_count: dict[str, int] = {}
+    for row in solved_rows:
+        for tag in json.loads(row["tags"] or "[]"):
+            tag_count[tag] = tag_count.get(tag, 0) + 1
+    top_tags = sorted(tag_count.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    # 최근 풀이 (solved_at 기준 최근 20개)
+    recent_rows = conn.execute(
+        """SELECT id, title, level, solved_at FROM problems
+           WHERE solved=1 AND solved_at IS NOT NULL
+           ORDER BY solved_at DESC LIMIT 20"""
+    ).fetchall()
+    recent = [dict(r) for r in recent_rows]
+
+    return {
+        "total":    total,
+        "by_level": by_level,
+        "top_tags": [{"tag": t, "count": c} for t, c in top_tags],
+        "recent":   recent,
+    }

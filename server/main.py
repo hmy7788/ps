@@ -51,3 +51,7 @@ if FRONTEND_DIR.exists():
     @app.get("/problem", response_class=FileResponse)
     def problem():
         return str(FRONTEND_DIR / "problem.html")
+
+    @app.get("/stats", response_class=FileResponse)
+    def stats_page():
+        return str(FRONTEND_DIR / "stats.html")
