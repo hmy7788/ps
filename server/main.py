@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from server.routers.problems import router as problems_router
 from server.routers.run import router as run_router
 from server.routers.testcases import router as testcases_router
+from server.routers.solutions import router as solutions_router
 
 app = FastAPI(title="PS Platform", version="0.1.0")
 
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(problems_router)
 app.include_router(run_router)
 app.include_router(testcases_router)
+app.include_router(solutions_router)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 

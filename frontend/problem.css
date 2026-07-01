@@ -325,6 +325,22 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .sr-time { color: var(--text-dim); min-width: 55px; text-align: right; }
 .sr-note { color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* 백준에 저장 버튼 */
+.sr-save-btn {
+  display: block;
+  margin: 6px 0 8px;
+  padding: 6px 16px;
+  background: var(--ok);
+  border: none;
+  border-radius: 5px;
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sr-save-btn:hover { filter: brightness(1.15); }
+.sr-save-btn:disabled { opacity: .7; cursor: default; filter: none; }
+
 /* 테케 미리보기 버튼 */
 #view-tc-btn {
   padding: 5px 12px;

@@ -349,6 +349,7 @@ function renderSubmitResults(results, passed, total) {
 
   el.innerHTML = `
     <div class="sr-summary ${summaryClass}">${icon} ${passed} / ${total} 통과</div>
+    ${allPass ? `<button class="sr-save-btn" id="save-solution-btn" onclick="saveSolution()">💾 백준에 저장</button>` : ''}
     <div class="sr-list">
       ${results.map((r, i) => {
         const badge = r.passed ? '<span class="sr-ok">✅</span>' :
@@ -382,6 +383,32 @@ async function loadSavedTestcases() {
       document.getElementById('view-tc-btn').disabled = false;
     }
   } catch (_) {}
+}
+
+/* ── 백준에 저장 ─────────────────────────────────────── */
+async function saveSolution() {
+  const btn = document.getElementById('save-solution-btn');
+  if (!btn || !editor || !currentProblem) return;
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  try {
+    const res = await fetch(`/api/problems/${currentProblem.id}/save-solution`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: editor.getValue() }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '저장 실패');
+    }
+    const data = await res.json();
+    btn.textContent = `✅ 저장 완료 (${data.path})`;
+    btn.style.cursor = 'default';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = `❌ ${e.message}`;
+  }
 }
 
 /* ── 테케 미리보기 토글 ──────────────────────────────── */
