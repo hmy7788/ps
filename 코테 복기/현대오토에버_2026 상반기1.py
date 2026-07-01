@@ -51,7 +51,7 @@ def solution2(w, h, dst_nodes):
         return abs(iy-jy)+abs(ix-jx)
     
     def dfs(curr, visited):
-        if visited == n:
+        if visited == 2**n-1:
             return 0
         
         if dp[curr][visited] != -1:
@@ -60,16 +60,24 @@ def solution2(w, h, dst_nodes):
         min_dist = float('inf')
 
         for next_node in range(n):
-            pass
+            if visited & (1 << next_node) == 0:
+               new_visited = visited | (1 << next_node)
+               dist = calc_distance(nodes[curr], nodes[next_node]) + dfs(next_node, new_visited) 
+               min_dist = min(min_dist, dist)
 
+        dp[curr][visited] = min_dist
+
+        return dp[curr][visited]
+
+    return dfs(0, 1)
 
 if __name__ == '__main__':
     print('완전 탐색으로 푼 문제: O(N!)')
-    print(solution1(5, 2, [5, 8]))
+    print(solution1(5, 2, [5, 8, 10]))
     print(solution1(5, 5, [3, 23]))
     print(solution1(5, 5, [4, 7, 9, 14, 17, 20, 25]))
 
     print('\n비트마스킹 + dp로 푼 문제: O(N^2 * 2^N)')
-    print(solution2(5, 2, [5, 8]))
+    print(solution2(5, 2, [5, 8, 10]))
     print(solution2(5, 5, [3, 23]))
     print(solution2(5, 5, [4, 7, 9, 14, 17, 20, 25]))
