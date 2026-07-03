@@ -342,6 +342,35 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 #submit-btn:hover { filter: brightness(1.15); }
 #submit-btn:disabled { opacity: .4; cursor: default; filter: none; }
 
+#find-ce-btn {
+  padding: 5px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--purple, #a78bfa);
+  border-color: color-mix(in srgb, var(--purple, #a78bfa) 40%, var(--border));
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#find-ce-btn:hover { border-color: var(--purple, #a78bfa); filter: brightness(1.15); }
+#find-ce-btn:disabled { opacity: .5; cursor: default; }
+
+#save-solution-btn {
+  margin-left: auto;
+  padding: 5px 16px;
+  background: var(--ok);
+  border: none;
+  border-radius: 5px;
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#save-solution-btn:hover { filter: brightness(1.15); }
+#save-solution-btn:disabled { opacity: .7; cursor: default; filter: none; }
+
 /* 제출 결과 */
 #submit-results {
   padding: 0 14px 8px;
@@ -381,27 +410,93 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .sr-time { color: var(--text-dim); min-width: 55px; text-align: right; }
 .sr-note { color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+#ce-results { margin-top: 10px; }
+
+/* 반례 찾기 배너 */
+.ce-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+}
+.ce-banner-icon { font-size: 15px; line-height: 1.4; }
+.ce-banner-title { font-weight: 700; margin-bottom: 2px; }
+.ce-banner-sub { color: var(--text-dim); font-size: 11px; }
+
+.ce-ok   { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.ce-ok   .ce-banner-title { color: var(--ok); }
+.ce-fail { border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
+.ce-fail .ce-banner-title { color: var(--err); }
+.ce-warn { border-color: color-mix(in srgb, var(--tle) 45%, var(--border)); }
+.ce-warn .ce-banner-title { color: var(--tle); }
+.ce-err  { border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
+.ce-err  .ce-banner-title { color: var(--err); }
+
+.ce-verdict {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--err) 20%, transparent);
+  color: var(--err);
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.ce-loading {
+  color: var(--text-dim);
+  align-items: center;
+}
+.ce-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-top-color: var(--purple, #a78bfa);
+  border-radius: 50%;
+  display: inline-block;
+  animation: ce-spin .7s linear infinite;
+}
+@keyframes ce-spin { to { transform: rotate(360deg); } }
+
+/* 반례 입력/출력 비교 카드 */
+.ce-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.ce-diff-col { background: var(--bg); padding: 8px 10px; min-width: 0; }
+.ce-diff-mine    { background: color-mix(in srgb, var(--err) 8%, var(--bg)); }
+.ce-diff-correct { background: color-mix(in srgb, var(--ok) 8%, var(--bg)); }
+.ce-diff-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.ce-diff-pre {
+  margin: 0;
+  font-size: 11px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
 .sr-warn {
   font-size: 11px;
   color: var(--tle);
   margin: 4px 0;
 }
-
-/* 백준에 저장 버튼 */
-.sr-save-btn {
-  display: block;
-  margin: 6px 0 8px;
-  padding: 6px 16px;
-  background: var(--ok);
-  border: none;
-  border-radius: 5px;
-  color: #000;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-}
-.sr-save-btn:hover { filter: brightness(1.15); }
-.sr-save-btn:disabled { opacity: .7; cursor: default; filter: none; }
 
 /* 테케 미리보기 버튼 */
 #view-tc-btn {
