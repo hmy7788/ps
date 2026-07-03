@@ -1,10 +1,5 @@
 import json
 import os
-import re
-import subprocess
-import sys
-import tempfile
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,11 +7,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from server.db import get_conn, get_problem_detail
-from server.utils import parse_time_limit
+from server.utils import parse_time_limit, run_one, strip_html
 
 router = APIRouter(prefix="/api")
 
-PYTHON = sys.executable
 PYTHON_TIME_MULTIPLIER = 3
 TESTCASES_DIR = Path(__file__).resolve().parent.parent.parent / "testcases"
 TESTCASES_DIR.mkdir(exist_ok=True)
@@ -24,37 +18,6 @@ TESTCASES_DIR.mkdir(exist_ok=True)
 
 def _tc_path(problem_id: int) -> Path:
     return TESTCASES_DIR / f"{problem_id}.json"
-
-
-def _strip_html(html: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", html or "")
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def _run_one(code: str, stdin: str, limit_sec: float) -> dict:
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False, encoding="utf-8"
-    ) as f:
-        f.write(code)
-        tmp = Path(f.name)
-    try:
-        t0 = time.perf_counter()
-        try:
-            proc = subprocess.run(
-                [PYTHON, str(tmp)],
-                input=stdin,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=limit_sec,
-            )
-            elapsed = round((time.perf_counter() - t0) * 1000, 2)
-            status = "OK" if proc.returncode == 0 else "ERROR"
-            return {"status": status, "stdout": proc.stdout, "elapsed_ms": elapsed}
-        except subprocess.TimeoutExpired:
-            return {"status": "TLE", "stdout": "", "elapsed_ms": None}
-    finally:
-        tmp.unlink(missing_ok=True)
 
 
 # ── GET: 저장된 테케 조회 ────────────────────────────────
@@ -80,9 +43,9 @@ async def generate_testcases(problem_id: int):
     if not prob:
         raise HTTPException(404, "문제를 찾을 수 없습니다.")
 
-    desc     = _strip_html(prob["description"])
-    inp_fmt  = _strip_html(prob["input_desc"])
-    out_fmt  = _strip_html(prob["output_desc"])
+    desc     = strip_html(prob["description"])
+    inp_fmt  = strip_html(prob["input_desc"])
+    out_fmt  = strip_html(prob["output_desc"])
     samples  = "\n\n".join(
         f"입력:\n{s['input'].strip()}\n출력:\n{s['output'].strip()}"
         for s in prob["samples"]
@@ -181,7 +144,7 @@ def submit(problem_id: int, req: SubmitRequest):
 
     results = []
     for tc in data["testcases"]:
-        r        = _run_one(req.code, tc["input"], limit_sec)
+        r        = run_one(req.code, tc["input"], limit_sec)
         actual   = (r["stdout"] or "").rstrip()
         expected = tc["output"].rstrip()
         passed   = (actual == expected) and r["status"] == "OK"
