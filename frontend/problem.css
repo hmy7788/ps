@@ -370,6 +370,12 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .sr-time { color: var(--text-dim); min-width: 55px; text-align: right; }
 .sr-note { color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.sr-warn {
+  font-size: 11px;
+  color: var(--tle);
+  margin: 4px 0;
+}
+
 /* 백준에 저장 버튼 */
 .sr-save-btn {
   display: block;

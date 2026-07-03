@@ -470,7 +470,8 @@ function renderSubmitResults(results, passed, total) {
 
   el.innerHTML = `
     <div class="sr-summary ${summaryClass}">${icon} ${passed} / ${total} 통과</div>
-    ${allPass ? `<button class="sr-save-btn" id="save-solution-btn" onclick="saveSolution()">💾 백준에 저장</button>` : ''}
+    ${!allPass ? `<div class="sr-warn">⚠️ 전체 통과가 아닙니다. AI 생성 테케가 잘못됐을 수 있으니 확인 후 저장하세요.</div>` : ''}
+    <button class="sr-save-btn" id="save-solution-btn" onclick="saveSolution()">💾 백준에 저장</button>
     <div class="sr-list">
       ${results.map((r, i) => {
         const badge = r.passed ? '<span class="sr-ok">✅</span>' :
