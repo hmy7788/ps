@@ -65,9 +65,11 @@
           <span id="tc-gen-status"></span>
           <button id="view-tc-btn" onclick="toggleTestcasePreview()" disabled>📋 테케 확인</button>
           <button id="submit-btn" onclick="submitCode()" disabled>▶ 제출</button>
+          <button id="find-ce-btn" onclick="findCounterexample()">🔍 반례 찾기</button>
         </div>
         <div id="tc-preview" style="display:none"></div>
         <div id="submit-results"></div>
+        <div id="ce-results"></div>
       </div>
     </div>
   </div>
@@ -539,6 +541,61 @@ async function saveSolution() {
     btn.disabled = false;
     btn.textContent = `❌ ${e.message}`;
   }
+}
+
+/* ── testcase.ac 반례 찾기 ────────────────────────────── */
+async function findCounterexample() {
+  const btn = document.getElementById('find-ce-btn');
+  const el  = document.getElementById('ce-results');
+  if (!btn || !editor || !currentProblem) return;
+
+  btn.disabled = true;
+  btn.textContent = '탐색 중... (최대 90초)';
+  el.innerHTML = '<div class="sr-loading">testcase.ac에서 반례를 찾는 중...</div>';
+
+  try {
+    const res = await fetch(`/api/problems/${currentProblem.id}/find-counterexample`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: editor.getValue() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '반례 찾기 실패');
+    renderCounterexampleResult(data);
+  } catch (e) {
+    el.innerHTML = `<div class="sr-summary sr-all-fail">❌ ${escHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 반례 찾기';
+  }
+}
+
+function renderCounterexampleResult(data) {
+  const el = document.getElementById('ce-results');
+
+  if (!data.registered) {
+    el.innerHTML = '<div class="sr-summary sr-partial">⚠️ 이 문제는 testcase.ac에 등록되어 있지 않습니다.</div>';
+    return;
+  }
+
+  if (data.status === 'not_found') {
+    el.innerHTML = `<div class="sr-summary sr-all-pass">✅ ${data.totalAttempted ?? data.totalCases ?? ''}개 케이스 동안 반례를 찾지 못했습니다. (완전한 정답 증명은 아님)</div>`;
+    return;
+  }
+
+  if (data.status === 'found') {
+    const ce = data.counterexample;
+    el.innerHTML = `
+      <div class="sr-summary sr-all-fail">❌ 반례 발견 (verdict: ${ce.verdict || '?'})</div>
+      <div class="tc-preview-item">
+        <div class="tc-preview-col"><b>입력</b><pre class="tc-preview-pre">${escHtml(ce.testcase.text)}</pre></div>
+        <div class="tc-preview-col"><b>내 출력</b><pre class="tc-preview-pre">${escHtml(ce.targetOutput.text)}</pre></div>
+        <div class="tc-preview-col"><b>정답 출력</b><pre class="tc-preview-pre">${escHtml(ce.correctOutput.text)}</pre></div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="sr-summary sr-all-fail">❌ ${escHtml(data.errorMessage || data.status || '알 수 없는 오류')}</div>`;
 }
 
 /* ── 테케 미리보기 토글 ──────────────────────────────── */
