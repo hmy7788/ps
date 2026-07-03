@@ -73,6 +73,17 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .section-title:first-child { margin-top: 0; }
 
 #prob-desc p { line-height: 1.75; margin-bottom: 8px; color: #ccc; }
+#prob-desc ol, #prob-desc ul {
+  padding-left: 22px;
+  margin-bottom: 8px;
+  color: #ccc;
+}
+#prob-desc li { line-height: 1.75; margin-bottom: 4px; }
+#prob-desc li > ol, #prob-desc li > ul {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+#prob-desc ol ol { list-style-type: lower-alpha; }
 #prob-desc pre {
   background: var(--surface2);
   padding: 10px 12px;
