@@ -37,6 +37,11 @@
     <input type="checkbox" id="solved-only-chk" onchange="onSolvedChange()">
     풀었던 문제만
   </label>
+
+  <label class="solved-filter-label">
+    <input type="checkbox" id="favorite-only-chk" onchange="onFavoriteChange()">
+    ⭐ 즐겨찾기만
+  </label>
 </header>
 
 <div id="list-info">로딩 중...</div>
@@ -45,7 +50,7 @@
 
 <script src="/static/common.js"></script>
 <script>
-const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false };
+const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false, favoriteOnly:false };
 let allTags = [];
 
 async function loadTags() {
@@ -98,12 +103,28 @@ function onSolvedChange() {
   st.page = 1; loadProblems();
 }
 
+function onFavoriteChange() {
+  st.favoriteOnly = document.getElementById('favorite-only-chk').checked;
+  st.page = 1; loadProblems();
+}
+
+async function toggleFavorite(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const data = await fetch(`/api/problems/${id}/favorite`, { method: 'POST' }).then(r => r.json());
+  const star = e.currentTarget;
+  star.classList.toggle('active', data.favorite);
+  star.textContent = data.favorite ? '⭐' : '☆';
+  if (st.favoriteOnly && !data.favorite) loadProblems();
+}
+
 async function loadProblems() {
   const p = new URLSearchParams();
   if (st.q) p.set('q', st.q);
   if (st.tags.length)   p.set('tags',   st.tags.join(','));
   if (st.levels.length) p.set('levels', st.levels.join(','));
   if (st.solvedOnly)    p.set('solved', '1');
+  if (st.favoriteOnly)  p.set('favorite', '1');
   p.set('page', st.page); p.set('size', st.size);
 
   const data = await fetch('/api/problems?' + p).then(r => r.json());
@@ -125,6 +146,7 @@ function renderGrid(items) {
         <span class="pid">#${p.id}</span>
         <span class="ptitle">${escHtml(p.title)}</span>
         <span class="badge ${lvClass(p.level)}">${LV_LABEL[p.level]}</span>
+        <span class="fav-star${p.favorite ? ' active' : ''}" onclick="toggleFavorite(event, ${p.id})">${p.favorite ? '⭐' : '☆'}</span>
       </div>
       <div class="card-tags">${p.tags.slice(0,4).map(t=>`<span class="tag">${tagKo(t)}</span>`).join('')}</div>
       <div class="card-meta">

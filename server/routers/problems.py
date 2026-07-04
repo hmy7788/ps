@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 import sqlite3
 
-from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats, get_heatmap_and_streak
+from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats, get_heatmap_and_streak, toggle_favorite
 from server.models import ProblemListResponse, ProblemDetail, ProblemSummary
 
 PROBLEMS_DIR = Path(__file__).resolve().parent.parent.parent / "all_problems" / "problems"
@@ -38,12 +38,16 @@ def list_problems(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     solved: int | None = Query(None, description="1이면 푼 문제만"),
+    favorite: int | None = Query(None, description="1이면 즐겨찾기만"),
     conn: sqlite3.Connection = Depends(db),
 ):
     tag_list = [t.strip() for t in tags.split(",")] if tags else []
     level_list = [int(l.strip()) for l in levels.split(",")] if levels else []
 
-    total, items = get_problems(conn, q, tag_list, level_list, page, size, solved_only=(solved == 1))
+    total, items = get_problems(
+        conn, q, tag_list, level_list, page, size,
+        solved_only=(solved == 1), favorite_only=(favorite == 1),
+    )
     return ProblemListResponse(
         total=total,
         page=page,
@@ -69,6 +73,15 @@ def get_problem(problem_id: int, conn: sqlite3.Connection = Depends(db)):
         if data.get(field):
             data[field] = _rewrite_img_src(data[field], problem_id)
     return ProblemDetail(**data)
+
+
+@router.post("/problems/{problem_id}/favorite")
+def toggle_problem_favorite(problem_id: int, conn: sqlite3.Connection = Depends(db)):
+    try:
+        favorite = toggle_favorite(conn, problem_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="문제를 찾을 수 없습니다.")
+    return {"favorite": favorite}
 
 
 @router.get("/tags", response_model=list[str])

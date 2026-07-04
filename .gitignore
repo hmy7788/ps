@@ -5,3 +5,4 @@ __pycache__/
 .env
 run.ps1
 .claude/
+drafts/

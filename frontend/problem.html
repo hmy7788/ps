@@ -12,6 +12,7 @@
 <header>
   <a class="back-btn" id="back-btn" href="/">← 목록</a>
   <div id="prob-title-header">로딩 중...</div>
+  <span class="fav-star" id="fav-star" onclick="toggleFavorite()">☆</span>
   <span class="badge" id="prob-badge"></span>
   <span class="meta-chip" id="prob-time"></span>
   <span class="meta-chip" id="prob-mem"></span>
@@ -39,6 +40,7 @@
       <span id="toolbar-lang">Python 3</span>
       <span id="toolbar-file" style="font-size:11px;color:var(--text-dim)"></span>
       <select id="solution-select" style="display:none" onchange="loadSolutionFile(this.value)"></select>
+      <span id="draft-status"></span>
     </div>
     <div id="editor-container"></div>
     <div id="panel-resizer"></div>
@@ -172,8 +174,61 @@ require(['vs/editor/editor.main'], () => {
     fontFamily: "'Cascadia Code','Fira Code',Consolas,monospace",
     tabSize: 4,
   });
+  editor.onDidChangeModelContent(scheduleDraftSave);
   loadProblem();
 });
+
+/* ── 임시 코드 저장(자동저장) ─────────────────────────── */
+let suppressAutosave = false;
+let draftSaveTimer = null;
+
+function scheduleDraftSave() {
+  if (suppressAutosave || !currentProblem) return;
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(saveDraftNow, 1000);
+}
+
+async function saveDraftNow() {
+  if (!editor || !currentProblem) return;
+  const res = await fetch(`/api/problems/${currentProblem.id}/draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: editor.getValue() }),
+  }).then(r => r.json()).catch(() => null);
+  if (res?.saved) {
+    const time = new Date(res.updated_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    setDraftStatus(`💾 임시저장됨 ${time}`, true);
+  }
+}
+
+function setDraftStatus(text, showDiscard) {
+  const el = document.getElementById('draft-status');
+  el.innerHTML = showDiscard
+    ? `${escHtml(text)} <a href="#" onclick="discardDraft();return false;" style="margin-left:6px">되돌리기</a>`
+    : escHtml(text);
+}
+
+async function loadDraftIfAny(problemId) {
+  const data = await fetch(`/api/problems/${problemId}/draft`).then(r => r.json()).catch(() => ({ exists: false }));
+  if (data.exists) {
+    suppressAutosave = true;
+    editor.setValue(data.code);
+    suppressAutosave = false;
+    const time = new Date(data.updated_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    setDraftStatus(`✏️ 임시저장된 코드 (${time})`, true);
+  } else {
+    document.getElementById('draft-status').innerHTML = '';
+  }
+}
+
+async function discardDraft() {
+  if (!currentProblem) return;
+  await fetch(`/api/problems/${currentProblem.id}/draft`, { method: 'DELETE' });
+  document.getElementById('draft-status').innerHTML = '';
+  suppressAutosave = true;
+  await loadSolutionList(currentProblem.id);
+  suppressAutosave = false;
+}
 
 async function loadProblem() {
   const p = await fetch(`/api/problems/${problemId}`).then(r => r.json());
@@ -181,6 +236,9 @@ async function loadProblem() {
   document.title = `#${p.id} ${p.title} - PS Platform`;
 
   document.getElementById('prob-title-header').textContent = `#${p.id} ${p.title}`;
+  const star = document.getElementById('fav-star');
+  star.textContent = p.favorite ? '⭐' : '☆';
+  star.classList.toggle('active', !!p.favorite);
   const badge = document.getElementById('prob-badge');
   badge.textContent = LV_LABEL[p.level];
   badge.className = `badge ${lvClass(p.level)}`;
@@ -215,7 +273,10 @@ async function loadProblem() {
   }
 
   if (editor) {
+    suppressAutosave = true;
     await loadSolutionList(p.id);
+    suppressAutosave = false;
+    await loadDraftIfAny(p.id);
   }
 
   initTestCases(p.samples);
@@ -509,6 +570,16 @@ async function loadSavedTestcases() {
   } catch (_) {}
 }
 
+/* ── 즐겨찾기 ─────────────────────────────────────────── */
+async function toggleFavorite() {
+  if (!currentProblem) return;
+  const data = await fetch(`/api/problems/${currentProblem.id}/favorite`, { method: 'POST' }).then(r => r.json());
+  currentProblem.favorite = data.favorite;
+  const star = document.getElementById('fav-star');
+  star.textContent = data.favorite ? '⭐' : '☆';
+  star.classList.toggle('active', data.favorite);
+}
+
 /* ── 백준에 저장 ─────────────────────────────────────── */
 async function saveSolution() {
   const btn = document.getElementById('save-solution-btn');
@@ -537,6 +608,8 @@ async function saveSolution() {
     const data = await res.json();
     btn.textContent = `✅ ${data.filename} 저장 완료`;
     btn.style.cursor = 'default';
+    await fetch(`/api/problems/${currentProblem.id}/draft`, { method: 'DELETE' });
+    document.getElementById('draft-status').innerHTML = '';
   } catch (e) {
     btn.disabled = false;
     btn.textContent = `❌ ${e.message}`;
