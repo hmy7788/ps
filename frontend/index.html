@@ -38,10 +38,9 @@
     풀었던 문제만
   </label>
 
-  <label class="solved-filter-label">
-    <input type="checkbox" id="favorite-only-chk" onchange="onFavoriteChange()">
+  <button class="filter-btn fav-filter-btn" id="favorite-only-btn" onclick="onFavoriteChange()">
     ⭐ 즐겨찾기만
-  </label>
+  </button>
 </header>
 
 <div id="list-info">로딩 중...</div>
@@ -104,17 +103,20 @@ function onSolvedChange() {
 }
 
 function onFavoriteChange() {
-  st.favoriteOnly = document.getElementById('favorite-only-chk').checked;
+  st.favoriteOnly = !st.favoriteOnly;
+  document.getElementById('favorite-only-btn').classList.toggle('active', st.favoriteOnly);
   st.page = 1; loadProblems();
 }
 
 async function toggleFavorite(e, id) {
   e.preventDefault();
   e.stopPropagation();
-  const data = await fetch(`/api/problems/${id}/favorite`, { method: 'POST' }).then(r => r.json());
   const star = e.currentTarget;
+  const data = await fetch(`/api/problems/${id}/favorite`, { method: 'POST' }).then(r => r.json());
   star.classList.toggle('active', data.favorite);
   star.textContent = data.favorite ? '⭐' : '☆';
+  star.closest('.prob-card')?.classList.toggle('favorited', data.favorite);
+  star.classList.remove('pop'); void star.offsetWidth; star.classList.add('pop');
   if (st.favoriteOnly && !data.favorite) loadProblems();
 }
 
@@ -141,7 +143,7 @@ function renderGrid(items) {
     return;
   }
   el.innerHTML = items.map(p => `
-    <a class="prob-card${p.solved ? ' solved' : ''}" href="/problem?id=${p.id}&page=${st.page}">
+    <a class="prob-card${p.solved ? ' solved' : ''}${p.favorite ? ' favorited' : ''}" href="/problem?id=${p.id}&page=${st.page}">
       <div class="card-top">
         <span class="pid">#${p.id}</span>
         <span class="ptitle">${escHtml(p.title)}</span>

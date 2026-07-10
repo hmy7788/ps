@@ -12,7 +12,7 @@
 <header>
   <a class="back-btn" id="back-btn" href="/">← 목록</a>
   <div id="prob-title-header">로딩 중...</div>
-  <span class="fav-star" id="fav-star" onclick="toggleFavorite()">☆</span>
+  <span class="fav-star" id="fav-star" title="즐겨찾기" onclick="toggleFavorite()">☆</span>
   <span class="badge" id="prob-badge"></span>
   <span class="meta-chip" id="prob-time"></span>
   <span class="meta-chip" id="prob-mem"></span>
@@ -578,6 +578,7 @@ async function toggleFavorite() {
   const star = document.getElementById('fav-star');
   star.textContent = data.favorite ? '⭐' : '☆';
   star.classList.toggle('active', data.favorite);
+  star.classList.remove('pop'); void star.offsetWidth; star.classList.add('pop');
 }
 
 /* ── 백준에 저장 ─────────────────────────────────────── */
