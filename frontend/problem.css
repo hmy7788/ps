@@ -29,6 +29,24 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
   min-width: 0;
 }
 
+.fav-star {
+  font-size: 18px;
+  color: var(--text-dim);
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform .15s, color .15s;
+}
+.fav-star:hover { color: #facc15; transform: scale(1.2); }
+.fav-star.active { color: #facc15; filter: drop-shadow(0 0 4px rgba(250, 204, 21, .6)); }
+.fav-star.pop { animation: fav-pop .35s ease; }
+@keyframes fav-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.5) rotate(-10deg); }
+  60%  { transform: scale(0.9) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
 .meta-chip {
   font-size: 11px;
   padding: 2px 8px;
@@ -132,6 +150,8 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
   max-width: 220px;
 }
 #editor-toolbar #solution-select:focus { outline: none; border-color: var(--accent); }
+#draft-status a { color: var(--accent); text-decoration: none; }
+#draft-status a:hover { text-decoration: underline; }
 
 #editor-container { flex: 1; min-height: 0; }
 
