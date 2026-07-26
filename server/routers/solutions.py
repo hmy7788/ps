@@ -155,7 +155,16 @@ def save_solution(problem_id: int, req: SaveRequest):
     grade      = _grade(prob["level"])
     title      = prob["title"]
     safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
-    folder     = ROOT / "백준" / grade / f"{problem_id}. {safe_title}"
+
+    # 기존 폴더 우선 재사용 (BaekjoonHub 등이 만든 폴더 중복 방지)
+    grade_dir = ROOT / "백준" / grade
+    pattern   = re.compile(rf"^{re.escape(str(problem_id))}\.")
+    folder    = next(
+        (d for d in grade_dir.iterdir() if d.is_dir() and pattern.match(d.name)),
+        None
+    ) if grade_dir.exists() else None
+    if folder is None:
+        folder = grade_dir / f"{problem_id}. {safe_title}"
     folder.mkdir(parents=True, exist_ok=True)
 
     # 풀이 파일명: memo 있으면 {title}_{memo}.py
