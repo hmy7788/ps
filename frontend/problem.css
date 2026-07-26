@@ -114,6 +114,14 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 #prob-desc table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
 #prob-desc td, #prob-desc th { border: 1px solid var(--border); padding: 4px 10px; }
 #prob-desc img { max-width: 100%; border-radius: 4px; }
+#prob-desc sub, #prob-desc sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+#prob-desc sub { bottom: -0.25em; }
+#prob-desc sup { top: -0.5em; }
 
 .samples-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 .sample-block label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
