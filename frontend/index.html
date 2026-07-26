@@ -20,7 +20,9 @@
     </button>
     <div class="dropdown" id="dd-tags">
       <input class="dd-search" type="text" placeholder="태그 검색..." oninput="renderTagList(this.value)">
-      <div class="dd-list" id="tag-list"></div>
+      <div class="dd-list-wrap" id="tag-list-wrap">
+        <div class="dd-list" id="tag-list"></div>
+      </div>
     </div>
   </div>
 
@@ -29,14 +31,15 @@
       레벨 <span class="cnt" id="lv-cnt">0</span> ▾
     </button>
     <div class="dropdown" id="dd-levels" style="min-width:170px">
-      <div class="dd-list" id="lv-list"></div>
+      <div class="dd-list-wrap" id="lv-list-wrap">
+        <div class="dd-list" id="lv-list"></div>
+      </div>
     </div>
   </div>
 
-  <label class="solved-filter-label">
-    <input type="checkbox" id="solved-only-chk" onchange="onSolvedChange()">
-    풀었던 문제만
-  </label>
+  <button class="filter-btn solved-filter-btn" id="solved-only-btn" onclick="onSolvedChange()">
+    ✅ 풀었던 문제만
+  </button>
 
   <button class="filter-btn fav-filter-btn" id="favorite-only-btn" onclick="onFavoriteChange()">
     ⭐ 즐겨찾기만
@@ -70,11 +73,13 @@ async function loadTags() {
 
 function renderTagList(q) {
   const filtered = sortTags(allTags).filter(t => (tagKo(t)+t).toLowerCase().includes(q.toLowerCase()));
-  document.getElementById('tag-list').innerHTML = filtered.map(t => `
+  const list = document.getElementById('tag-list');
+  list.innerHTML = filtered.map(t => `
     <label>
       <input type="checkbox" value="${t}" ${st.tags.includes(t)?'checked':''} onchange="onTagChange()">
       ${tagKo(t)}
     </label>`).join('');
+  updateScrollHint(list);
 }
 
 function onTagChange() {
@@ -102,7 +107,7 @@ function onTagChange() {
 
 // URL 파라미터에서 복원된 필터 상태를 UI에 반영
 if (st.q) document.getElementById('search-input').value = st.q;
-if (st.solvedOnly) document.getElementById('solved-only-chk').checked = true;
+if (st.solvedOnly) document.getElementById('solved-only-btn').classList.add('active');
 if (st.favoriteOnly) document.getElementById('favorite-only-btn').classList.add('active');
 (function syncCntBadges() {
   const tc = document.getElementById('tag-cnt');
@@ -122,7 +127,8 @@ function onLvChange() {
 }
 
 function onSolvedChange() {
-  st.solvedOnly = document.getElementById('solved-only-chk').checked;
+  st.solvedOnly = !st.solvedOnly;
+  document.getElementById('solved-only-btn').classList.toggle('active', st.solvedOnly);
   st.page = 1; loadProblems();
 }
 
@@ -171,10 +177,25 @@ function _filterParams() {
   return p.toString();
 }
 
+function resetFilter() {
+  st.q = ''; st.tags = []; st.levels = []; st.solvedOnly = false; st.favoriteOnly = false; st.page = 1;
+  document.getElementById('search-input').value = '';
+  document.getElementById('solved-only-btn').classList.remove('active');
+  document.getElementById('favorite-only-btn').classList.remove('active');
+  document.querySelectorAll('#tag-list input').forEach(e => e.checked = false);
+  document.querySelectorAll('#lv-list input').forEach(e => e.checked = false);
+  document.getElementById('tag-cnt').classList.remove('show');
+  document.getElementById('lv-cnt').classList.remove('show');
+  loadProblems();
+}
+
 function renderGrid(items) {
   const el = document.getElementById('problem-grid');
   if (!items.length) {
-    el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-dim)">검색 결과가 없습니다.</div>';
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px 20px;color:var(--text-dim)">
+      <div style="margin-bottom:14px">검색 결과가 없습니다.</div>
+      <button onclick="resetFilter()" style="padding:6px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;cursor:pointer" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">필터 초기화</button>
+    </div>`;
     return;
   }
   el.innerHTML = items.map(p => `
@@ -212,9 +233,21 @@ function renderPagination() {
 }
 function goPage(p) { st.page = p; loadProblems(); window.scrollTo(0,0); }
 
+function updateScrollHint(list) {
+  const wrap = list.closest('.dd-list-wrap');
+  if (!wrap) return;
+  const atEnd = list.scrollHeight - list.scrollTop <= list.clientHeight + 2;
+  wrap.classList.toggle('scrolled-end', atEnd);
+}
+
 function toggleDd(id) {
   document.querySelectorAll('.dropdown').forEach(el => { if (el.id !== id) el.classList.remove('open'); });
-  document.getElementById(id).classList.toggle('open');
+  const dd = document.getElementById(id);
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    const list = dd.querySelector('.dd-list');
+    if (list) { updateScrollHint(list); list.onscroll = () => updateScrollHint(list); }
+  }
 }
 document.addEventListener('click', e => {
   if (!e.target.closest('.filter-wrap')) document.querySelectorAll('.dropdown').forEach(el => el.classList.remove('open'));

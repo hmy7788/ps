@@ -24,12 +24,16 @@
   <div id="prob-desc">
     <div class="section-title">문제</div>
     <div id="desc-body"></div>
+    <hr class="section-divider">
     <div class="section-title">입력</div>
     <div id="desc-input"></div>
     <div class="section-title">출력</div>
     <div id="desc-output"></div>
-    <div class="section-title">예제</div>
-    <div id="desc-samples"></div>
+    <hr class="section-divider">
+    <div class="section-title">예제 입력</div>
+    <div id="desc-samples-in"></div>
+    <div class="section-title">예제 출력</div>
+    <div id="desc-samples-out"></div>
   </div>
 
   <div id="layout-resizer"></div>
@@ -68,7 +72,12 @@
           <button id="view-tc-btn" onclick="toggleTestcasePreview()" disabled>📋 테케 확인</button>
           <button id="submit-btn" onclick="submitCode()" disabled>▶ 제출</button>
           <button id="find-ce-btn" onclick="findCounterexample()">🔍 반례 찾기</button>
-          <button id="save-solution-btn" onclick="saveSolution()">💾 백준에 저장</button>
+          <button id="save-solution-btn" onclick="showSaveMemoForm()">💾 백준에 저장</button>
+        </div>
+        <div id="save-memo-form" style="display:none">
+          <input id="save-memo-input" type="text" placeholder="풀이 메모 (선택) — 예: dp, bfs">
+          <button id="save-memo-confirm" onclick="saveSolution()">저장</button>
+          <button id="save-memo-cancel" onclick="hideSaveMemoForm()">취소</button>
         </div>
         <div id="tc-preview" style="display:none"></div>
         <div id="submit-results"></div>
@@ -181,6 +190,10 @@ require(['vs/editor/editor.main'], () => {
     tabSize: 4,
   });
   editor.onDidChangeModelContent(scheduleDraftSave);
+  document.getElementById('save-memo-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveSolution();
+    if (e.key === 'Escape') hideSaveMemoForm();
+  });
   loadProblem();
 });
 
@@ -261,30 +274,27 @@ async function loadProblem() {
   document.getElementById('desc-input').innerHTML  = p.input_desc;
   document.getElementById('desc-output').innerHTML = p.output_desc;
 
-  const samplesEl = document.getElementById('desc-samples');
+  const samplesInEl  = document.getElementById('desc-samples-in');
+  const samplesOutEl = document.getElementById('desc-samples-out');
   if (p.samples.length) {
-    samplesEl.innerHTML = p.samples.map((s, i) => `
+    const numLabel = (i) => p.samples.length > 1 ? `<div class="sample-pair-num">예제 ${i+1}</div>` : '';
+    samplesInEl.innerHTML = p.samples.map((s, i) => `
+      ${numLabel(i)}
       <div class="sample-pair">
-        ${p.samples.length > 1 ? `<div class="sample-pair-num">예제 ${i+1}</div>` : ''}
-        <div class="sample-grid">
-          <div class="sample-block">
-            <div class="sample-hdr">
-              <span class="sample-hdr-label">입력</span>
-              <button class="sample-copy-btn" onclick="copySample(this, ${JSON.stringify(s.input.trimEnd())})">복사</button>
-            </div>
-            <pre class="sample-pre">${escHtml(s.input.trimEnd())}</pre>
-          </div>
-          <div class="sample-block">
-            <div class="sample-hdr">
-              <span class="sample-hdr-label">출력</span>
-              <button class="sample-copy-btn" onclick="copySample(this, ${JSON.stringify(s.output.trimEnd())})">복사</button>
-            </div>
-            <pre class="sample-pre">${escHtml(s.output.trimEnd())}</pre>
-          </div>
+        <div class="sample-block">
+          <pre class="sample-pre">${escHtml(s.input.trimEnd())}</pre>
+        </div>
+      </div>`).join('');
+    samplesOutEl.innerHTML = p.samples.map((s, i) => `
+      ${numLabel(i)}
+      <div class="sample-pair">
+        <div class="sample-block">
+          <pre class="sample-pre">${escHtml(s.output.trimEnd())}</pre>
         </div>
       </div>`).join('');
   } else {
-    samplesEl.innerHTML = '<span style="color:var(--text-dim)">예제 없음</span>';
+    samplesInEl.innerHTML  = '<span style="color:var(--text-dim)">예제 없음</span>';
+    samplesOutEl.innerHTML = '<span style="color:var(--text-dim)">예제 없음</span>';
   }
 
   if (editor) {
@@ -441,7 +451,9 @@ async function runAll() {
   if (!editor || !currentProblem) return;
   const btn = document.getElementById('run-all-btn');
   btn.disabled = true;
+  btn.textContent = '⏳ 실행 중...';
   for (let i = 0; i < testCases.length; i++) await runOne(i);
+  btn.textContent = '▶▶ 전체 실행';
   btn.disabled = false;
 }
 
@@ -585,16 +597,6 @@ async function loadSavedTestcases() {
   } catch (_) {}
 }
 
-/* ── 예제 복사 ───────────────────────────────────────── */
-function copySample(btn, text) {
-  navigator.clipboard.writeText(text).then(() => {
-    const prev = btn.textContent;
-    btn.textContent = '✓';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = prev; btn.classList.remove('copied'); }, 1500);
-  });
-}
-
 /* ── 즐겨찾기 ─────────────────────────────────────────── */
 async function toggleFavorite() {
   if (!currentProblem) return;
@@ -607,16 +609,22 @@ async function toggleFavorite() {
 }
 
 /* ── 백준에 저장 ─────────────────────────────────────── */
+function showSaveMemoForm() {
+  document.getElementById('save-memo-form').style.display = 'flex';
+  document.getElementById('save-memo-input').focus();
+  document.getElementById('save-solution-btn').disabled = true;
+}
+function hideSaveMemoForm() {
+  document.getElementById('save-memo-form').style.display = 'none';
+  document.getElementById('save-solution-btn').disabled = false;
+  document.getElementById('save-memo-input').value = '';
+}
 async function saveSolution() {
   const btn = document.getElementById('save-solution-btn');
   if (!btn || !editor || !currentProblem) return;
 
-  // 메모 입력 팝업
-  const memo = prompt(
-    '풀이 메모를 입력하세요 (선택, 파일명에 추가됨)\n예: dp, bfs, greedy\n\n비워두면 기본 파일명으로 저장됩니다.',
-    ''
-  );
-  if (memo === null) return; // 취소
+  const memo = document.getElementById('save-memo-input').value.trim();
+  hideSaveMemoForm();
 
   btn.disabled = true;
   btn.textContent = '저장 중...';

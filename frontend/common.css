@@ -14,6 +14,11 @@
   --ok:       #4caf50;
   --err:      #f44336;
   --tle:      #ff9800;
+  --purple:   #a78bfa;
+  --favorite: #facc15;
+  --diamond:  #5ce0ff;
+  --ruby:     #ff4d6d;
+  --bronze:   #c8833d;
 }
 
 html, body {
@@ -42,6 +47,40 @@ header {
   flex-shrink: 0;
 }
 .logo { font-weight: 700; font-size: 16px; color: var(--accent); text-decoration: none; }
+
+/* 뒤로가기 버튼 공통 */
+.back-btn {
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 즐겨찾기 별 공통 */
+.fav-star {
+  font-size: 16px;
+  color: var(--text-dim);
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform .15s, color .15s;
+}
+.fav-star:hover { color: var(--favorite); transform: scale(1.2); }
+.fav-star.active { color: var(--favorite); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--favorite) 60%, transparent)); }
+.fav-star.pop { animation: fav-pop .35s ease; }
+@keyframes fav-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.5) rotate(-10deg); }
+  60%  { transform: scale(0.9) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
 
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

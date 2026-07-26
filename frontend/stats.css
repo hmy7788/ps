@@ -2,20 +2,6 @@
 
 body { overflow-y: auto; }
 
-.back-btn {
-  padding: 4px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  cursor: pointer;
-  font-size: 12px;
-  text-decoration: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.back-btn:hover { border-color: var(--accent); color: var(--accent); }
-
 main {
   max-width: 960px;
   margin: 0 auto;
@@ -53,9 +39,9 @@ main {
 .sc-num.silver   { color: var(--silver); }
 .sc-num.gold     { color: var(--gold); }
 .sc-num.platinum { color: var(--platinum); }
-.sc-num.diamond  { color: #5ce0ff; }
-.sc-num.ruby     { color: #ff4d6d; }
-.sc-num.bronze   { color: #c8833d; }
+.sc-num.diamond  { color: var(--diamond); }
+.sc-num.ruby     { color: var(--ruby); }
+.sc-num.bronze   { color: var(--bronze); }
 
 .sc-label {
   font-size: 12px;
@@ -121,9 +107,9 @@ main {
 .bar-fill.silver   { background: var(--silver); }
 .bar-fill.gold     { background: var(--gold); }
 .bar-fill.platinum { background: var(--platinum); }
-.bar-fill.diamond  { background: #5ce0ff; }
-.bar-fill.ruby     { background: #ff4d6d; }
-.bar-fill.bronze   { background: #c8833d; }
+.bar-fill.diamond  { background: var(--diamond); }
+.bar-fill.ruby     { background: var(--ruby); }
+.bar-fill.bronze   { background: var(--bronze); }
 .bar-fill.accent   { background: var(--accent); }
 
 .bar-val {

@@ -30,18 +30,11 @@ header { position: sticky; top: 0; z-index: 10; }
 .stats-link:hover { color: var(--accent); border-color: var(--accent); }
 
 /* 풀었던 문제만 필터 */
-.solved-filter-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-dim);
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
+.solved-filter-btn.active {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--border));
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
 }
-.solved-filter-label input { accent-color: var(--ok); cursor: pointer; }
-.solved-filter-label:has(input:checked) { color: var(--ok); }
 
 /* 필터 드롭다운 */
 .filter-wrap { position: relative; }
@@ -99,6 +92,22 @@ header { position: sticky; top: 0; z-index: 10; }
   outline: none;
 }
 
+/* 스크롤 힌트 그라데이션 */
+.dd-list-wrap {
+  position: relative;
+}
+.dd-list-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 32px;
+  background: linear-gradient(transparent, var(--surface2));
+  pointer-events: none;
+  border-radius: 0 0 4px 4px;
+  transition: opacity .2s;
+}
+.dd-list-wrap.scrolled-end::after { opacity: 0; }
+
 .dd-list { max-height: 280px; overflow-y: auto; }
 .dd-list label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
 .dd-list label:hover { background: var(--border); }
@@ -136,38 +145,23 @@ header { position: sticky; top: 0; z-index: 10; }
   color: inherit;
 }
 .prob-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.prob-card.solved { border-left: 3px solid var(--ok); }
+.prob-card.solved {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+}
 
 .card-top { display: flex; align-items: center; gap: 8px; }
 .pid { font-size: 12px; color: var(--text-dim); }
 .ptitle { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.fav-star {
-  font-size: 16px;
-  color: var(--text-dim);
-  cursor: pointer;
-  line-height: 1;
-  flex-shrink: 0;
-  transition: transform .15s, color .15s;
-}
-.fav-star:hover { color: #facc15; transform: scale(1.2); }
-.fav-star.active { color: #facc15; filter: drop-shadow(0 0 4px rgba(250, 204, 21, .6)); }
-.fav-star.pop { animation: fav-pop .35s ease; }
-@keyframes fav-pop {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(1.5) rotate(-10deg); }
-  60%  { transform: scale(0.9) rotate(6deg); }
-  100% { transform: scale(1) rotate(0); }
-}
-
 .fav-filter-btn.active {
-  color: #facc15;
-  border-color: color-mix(in srgb, #facc15 55%, var(--border));
-  background: color-mix(in srgb, #facc15 12%, var(--surface));
+  color: var(--favorite);
+  border-color: color-mix(in srgb, var(--favorite) 55%, var(--border));
+  background: color-mix(in srgb, var(--favorite) 12%, var(--surface));
 }
 
 .prob-card.favorited {
-  background: linear-gradient(135deg, color-mix(in srgb, #facc15 6%, var(--surface)) 0%, var(--surface) 40%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--favorite) 6%, var(--surface)) 0%, var(--surface) 40%);
 }
 
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
