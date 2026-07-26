@@ -154,7 +154,7 @@ def save_solution(problem_id: int, req: SaveRequest):
 
     grade      = _grade(prob["level"])
     title      = prob["title"]
-    safe_title = title.replace("/", "_").replace("\\", "_")
+    safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
     folder     = ROOT / "백준" / grade / f"{problem_id}. {safe_title}"
     folder.mkdir(parents=True, exist_ok=True)
 

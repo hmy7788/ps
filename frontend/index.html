@@ -10,7 +10,7 @@
 <body>
 
 <header>
-  <div class="logo">PS Platform</div>
+  <a class="logo" href="/">PS Platform</a>
   <a class="stats-link" href="/stats">📊 통계</a>
   <input class="search-input" id="search-input" type="text" placeholder="🔍  문제 번호 또는 제목 검색...">
 
@@ -50,6 +50,17 @@
 <script src="/static/common.js"></script>
 <script>
 const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false, favoriteOnly:false };
+
+(function restoreFromUrl() {
+  const _qs = new URLSearchParams(location.search);
+  if (_qs.get('page'))     st.page        = parseInt(_qs.get('page')) || 1;
+  if (_qs.get('q'))        st.q           = _qs.get('q');
+  if (_qs.get('tags'))     st.tags        = _qs.get('tags').split(',').filter(Boolean);
+  if (_qs.get('levels'))   st.levels      = _qs.get('levels').split(',').map(Number).filter(Boolean);
+  if (_qs.get('solved'))   st.solvedOnly  = true;
+  if (_qs.get('favorite')) st.favoriteOnly = true;
+})();
+
 let allTags = [];
 
 async function loadTags() {
@@ -83,10 +94,23 @@ function onTagChange() {
   document.getElementById('lv-list').innerHTML = groups.map(g => `
     <div class="lv-group-title" style="color:${g.color}">${g.label}</div>
     ${g.levels.map(l => `<label>
-      <input type="checkbox" value="${l}" onchange="onLvChange()">
+      <input type="checkbox" value="${l}" ${st.levels.includes(l)?'checked':''} onchange="onLvChange()">
       <span class="badge ${lvClass(l)}">${LV_LABEL[l]}</span>
     </label>`).join('')}
   `).join('');
+})();
+
+// URL 파라미터에서 복원된 필터 상태를 UI에 반영
+if (st.q) document.getElementById('search-input').value = st.q;
+if (st.solvedOnly) document.getElementById('solved-only-chk').checked = true;
+if (st.favoriteOnly) document.getElementById('favorite-only-btn').classList.add('active');
+(function syncCntBadges() {
+  const tc = document.getElementById('tag-cnt');
+  tc.textContent = st.tags.length;
+  tc.classList.toggle('show', st.tags.length > 0);
+  const lc = document.getElementById('lv-cnt');
+  lc.textContent = st.levels.length;
+  lc.classList.toggle('show', st.levels.length > 0);
 })();
 
 function onLvChange() {
@@ -136,6 +160,17 @@ async function loadProblems() {
   renderPagination();
 }
 
+function _filterParams() {
+  const p = new URLSearchParams();
+  p.set('page', st.page);
+  if (st.q)             p.set('q',       st.q);
+  if (st.tags.length)   p.set('tags',    st.tags.join(','));
+  if (st.levels.length) p.set('levels',  st.levels.join(','));
+  if (st.solvedOnly)    p.set('solved',   '1');
+  if (st.favoriteOnly)  p.set('favorite', '1');
+  return p.toString();
+}
+
 function renderGrid(items) {
   const el = document.getElementById('problem-grid');
   if (!items.length) {
@@ -143,7 +178,7 @@ function renderGrid(items) {
     return;
   }
   el.innerHTML = items.map(p => `
-    <a class="prob-card${p.solved ? ' solved' : ''}${p.favorite ? ' favorited' : ''}" href="/problem?id=${p.id}&page=${st.page}">
+    <a class="prob-card${p.solved ? ' solved' : ''}${p.favorite ? ' favorited' : ''}" href="/problem?id=${p.id}&${_filterParams()}">
       <div class="card-top">
         <span class="pid">#${p.id}</span>
         <span class="ptitle">${escHtml(p.title)}</span>
@@ -190,9 +225,6 @@ document.getElementById('search-input').addEventListener('input', e => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => { st.q = e.target.value.trim(); st.page = 1; loadProblems(); }, 300);
 });
-
-const _initPage = new URLSearchParams(location.search).get('page');
-if (_initPage) st.page = parseInt(_initPage) || 1;
 
 loadTags();
 loadProblems();

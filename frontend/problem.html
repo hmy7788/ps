@@ -159,8 +159,14 @@ let currentProblem = null;
 const _qs = new URLSearchParams(location.search);
 const problemId = _qs.get('id');
 if (!problemId) location.href = '/';
-const _page = _qs.get('page');
-if (_page) document.getElementById('back-btn').href = `/?page=${_page}`;
+(function restoreBackBtn() {
+  const back = new URLSearchParams();
+  ['page','q','tags','levels','solved','favorite'].forEach(k => {
+    const v = _qs.get(k);
+    if (v) back.set(k, v);
+  });
+  if (back.toString()) document.getElementById('back-btn').href = '/?' + back.toString();
+})();
 
 require(['vs/editor/editor.main'], () => {
   editor = monaco.editor.create(document.getElementById('editor-container'), {
@@ -258,14 +264,23 @@ async function loadProblem() {
   const samplesEl = document.getElementById('desc-samples');
   if (p.samples.length) {
     samplesEl.innerHTML = p.samples.map((s, i) => `
-      <div class="samples-wrap">
-        <div class="sample-block">
-          <label>입력 ${i+1}</label>
-          <pre>${escHtml(s.input.trimEnd())}</pre>
-        </div>
-        <div class="sample-block">
-          <label>출력 ${i+1}</label>
-          <pre>${escHtml(s.output.trimEnd())}</pre>
+      <div class="sample-pair">
+        ${p.samples.length > 1 ? `<div class="sample-pair-num">예제 ${i+1}</div>` : ''}
+        <div class="sample-grid">
+          <div class="sample-block">
+            <div class="sample-hdr">
+              <span class="sample-hdr-label">입력</span>
+              <button class="sample-copy-btn" onclick="copySample(this, ${JSON.stringify(s.input.trimEnd())})">복사</button>
+            </div>
+            <pre class="sample-pre">${escHtml(s.input.trimEnd())}</pre>
+          </div>
+          <div class="sample-block">
+            <div class="sample-hdr">
+              <span class="sample-hdr-label">출력</span>
+              <button class="sample-copy-btn" onclick="copySample(this, ${JSON.stringify(s.output.trimEnd())})">복사</button>
+            </div>
+            <pre class="sample-pre">${escHtml(s.output.trimEnd())}</pre>
+          </div>
         </div>
       </div>`).join('');
   } else {
@@ -568,6 +583,16 @@ async function loadSavedTestcases() {
       document.getElementById('view-tc-btn').disabled = false;
     }
   } catch (_) {}
+}
+
+/* ── 예제 복사 ───────────────────────────────────────── */
+function copySample(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const prev = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove('copied'); }, 1500);
+  });
 }
 
 /* ── 즐겨찾기 ─────────────────────────────────────────── */
