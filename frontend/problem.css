@@ -456,6 +456,18 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 .ce-err  { border-color: color-mix(in srgb, var(--err) 45%, var(--border)); }
 .ce-err  .ce-banner-title { color: var(--err); }
 
+.ce-source {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--purple, #a78bfa) 18%, transparent);
+  color: var(--purple, #a78bfa);
+  font-weight: 600;
+  font-size: 9px;
+  vertical-align: middle;
+}
+
 .ce-verdict {
   display: inline-block;
   padding: 1px 7px;

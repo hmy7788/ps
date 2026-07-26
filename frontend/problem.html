@@ -644,6 +644,12 @@ async function findCounterexample() {
   }
 }
 
+function ceSourceBadge(data) {
+  return data.source === 'ai-fallback'
+    ? '<span class="ce-source">🤖 AI 폴백</span>'
+    : '<span class="ce-source">testcase.ac</span>';
+}
+
 function renderCounterexampleResult(data) {
   const el = document.getElementById('ce-results');
 
@@ -651,8 +657,8 @@ function renderCounterexampleResult(data) {
     el.innerHTML = `
       <div class="ce-banner ce-warn">
         <span class="ce-banner-icon">⚠️</span>
-        <div><div class="ce-banner-title">testcase.ac 미등록 문제</div>
-        <div class="ce-banner-sub">이 문제는 testcase.ac에 아직 등록되어 있지 않아 반례 탐색을 지원하지 않습니다.</div></div>
+        <div><div class="ce-banner-title">반례 탐색 불가</div>
+        <div class="ce-banner-sub">${escHtml(data.errorMessage || '이 문제는 testcase.ac에 등록되어 있지 않고, AI 폴백도 실패했습니다.')}</div></div>
       </div>`;
     return;
   }
@@ -662,7 +668,7 @@ function renderCounterexampleResult(data) {
     el.innerHTML = `
       <div class="ce-banner ce-ok">
         <span class="ce-banner-icon">✅</span>
-        <div><div class="ce-banner-title">반례를 찾지 못했습니다</div>
+        <div><div class="ce-banner-title">반례를 찾지 못했습니다 ${ceSourceBadge(data)}</div>
         <div class="ce-banner-sub">${n}개 케이스 시도 · 완전한 정답 증명은 아닙니다</div></div>
       </div>`;
     return;
@@ -673,7 +679,7 @@ function renderCounterexampleResult(data) {
     el.innerHTML = `
       <div class="ce-banner ce-fail">
         <span class="ce-banner-icon">❌</span>
-        <div><div class="ce-banner-title">반례 발견</div>
+        <div><div class="ce-banner-title">반례 발견 ${ceSourceBadge(data)}</div>
         <div class="ce-banner-sub">verdict: <span class="ce-verdict">${escHtml(ce.verdict || '?')}</span></div></div>
       </div>
       <div class="ce-diff">
