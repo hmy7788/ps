@@ -44,7 +44,7 @@ main {
 .sc-num.bronze   { color: var(--bronze); }
 
 .sc-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   margin-top: 4px;
 }
@@ -70,7 +70,7 @@ main {
 .recent-box { grid-column: 1 / -1; }
 
 .stat-box-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -86,7 +86,7 @@ main {
   margin-bottom: 10px;
 }
 .bar-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   min-width: 68px;
   text-align: right;
@@ -113,7 +113,7 @@ main {
 .bar-fill.accent   { background: var(--accent); }
 
 .bar-val {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   min-width: 24px;
   text-align: right;
@@ -134,10 +134,10 @@ main {
 .recent-item:last-child { border-bottom: none; }
 .recent-item:hover { background: var(--surface2); }
 
-.recent-date  { font-size: 11px; color: var(--text-dim); min-width: 52px; }
-.recent-title { font-size: 13px; flex: 1; }
+.recent-date  { font-size: 12px; color: var(--text-dim); min-width: 52px; }
+.recent-title { font-size: 14px; flex: 1; }
 
-.empty { font-size: 13px; color: var(--text-dim); padding: 12px 0; }
+.empty { font-size: 14px; color: var(--text-dim); padding: 12px 0; }
 
 /* 히트맵 */
 .stat-box-title-row {
@@ -149,7 +149,7 @@ main {
 .stat-box-title-row .stat-box-title { margin-bottom: 0; }
 
 .streak-badge {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: #ff9500;
 }
@@ -163,7 +163,7 @@ main {
   min-width: max-content;
 }
 .month-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-dim);
   grid-row: 1;
 }
@@ -198,7 +198,7 @@ main {
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-dim);
 }
 .legend-cell {

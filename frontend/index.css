@@ -12,14 +12,14 @@ header { position: sticky; top: 0; z-index: 10; }
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
 }
 .search-input:focus { border-color: var(--accent); }
 
 /* 통계 링크 */
 .stats-link {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
   text-decoration: none;
   white-space: nowrap;
@@ -46,7 +46,7 @@ header { position: sticky; top: 0; z-index: 10; }
   border-radius: 6px;
   color: var(--text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -59,7 +59,7 @@ header { position: sticky; top: 0; z-index: 10; }
   color: #000;
   border-radius: 10px;
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   display: none;
 }
@@ -88,7 +88,7 @@ header { position: sticky; top: 0; z-index: 10; }
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
 }
 
@@ -109,16 +109,16 @@ header { position: sticky; top: 0; z-index: 10; }
 .dd-list-wrap.scrolled-end::after { opacity: 0; }
 
 .dd-list { max-height: 280px; overflow-y: auto; }
-.dd-list label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.dd-list label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 .dd-list label:hover { background: var(--border); }
 .dd-list input[type=checkbox] { accent-color: var(--accent); flex-shrink: 0; }
 
-.lv-group-title { font-size: 11px; color: var(--text-dim); padding: 6px 6px 3px; }
+.lv-group-title { font-size: 12px; color: var(--text-dim); padding: 6px 6px 3px; }
 
 /* 정보바 */
 #list-info {
   padding: 10px 20px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   border-bottom: 1px solid var(--border);
 }
@@ -151,7 +151,7 @@ header { position: sticky; top: 0; z-index: 10; }
 }
 
 .card-top { display: flex; align-items: center; gap: 8px; }
-.pid { font-size: 12px; color: var(--text-dim); }
+.pid { font-size: 13px; color: var(--text-dim); }
 .ptitle { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .fav-filter-btn.active {
@@ -164,10 +164,17 @@ header { position: sticky; top: 0; z-index: 10; }
   background: linear-gradient(135deg, color-mix(in srgb, var(--favorite) 6%, var(--surface)) 0%, var(--surface) 40%);
 }
 
-.card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
+.prob-card.solved.favorited {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--favorite) 8%, var(--surface)) 0%,
+    color-mix(in srgb, var(--ok) 8%, var(--surface)) 100%);
+}
 
-.card-meta { font-size: 11px; color: var(--text-dim); display: flex; gap: 10px; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
+
+.card-meta { font-size: 12px; color: var(--text-dim); display: flex; gap: 10px; }
 
 /* 페이지네이션 */
 #pagination {
@@ -188,7 +195,7 @@ header { position: sticky; top: 0; z-index: 10; }
   border-radius: 5px;
   color: var(--text);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;

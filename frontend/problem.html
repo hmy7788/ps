@@ -6,6 +6,7 @@
 <title>PS Platform</title>
 <link rel="stylesheet" href="/static/common.css">
 <link rel="stylesheet" href="/static/problem.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 </head>
 <body>
 
@@ -87,6 +88,8 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="/static/common.js"></script>
 <script>var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } };</script>
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
@@ -182,7 +185,7 @@ require(['vs/editor/editor.main'], () => {
     value: '',
     language: 'python',
     theme: 'vs-dark',
-    fontSize: 14,
+    fontSize: 15,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     automaticLayout: true,
@@ -273,6 +276,16 @@ async function loadProblem() {
   document.getElementById('desc-body').innerHTML   = p.description;
   document.getElementById('desc-input').innerHTML  = p.input_desc;
   document.getElementById('desc-output').innerHTML = p.output_desc;
+
+  renderMathInElement(document.getElementById('prob-desc'), {
+    delimiters: [
+      { left: '$$',  right: '$$',  display: true  },
+      { left: '\\[', right: '\\]', display: true  },
+      { left: '\\(', right: '\\)', display: false },
+      { left: '$',   right: '$',   display: false },
+    ],
+    throwOnError: false,
+  });
 
   const samplesInEl  = document.getElementById('desc-samples-in');
   const samplesOutEl = document.getElementById('desc-samples-out');
@@ -375,9 +388,11 @@ function renderTestCases() {
     <div class="tc-item">
       <div class="tc-hdr">
         <span class="tc-lbl">${escHtml(tc.label)}</span>
-        <span class="tc-badge ${tc.result === 'ok' ? 'tc-ok' : tc.result === 'fail' ? 'tc-fail' : ''}">
-          ${tc.result === 'ok' ? `✅ 정답${tc.elapsed != null ? ` (${tc.elapsed}ms)` : ''}` :
-            tc.result === 'fail' ? '❌ 오답' : ''}
+        <span class="tc-badge ${tc.result === 'ok' ? 'tc-ok' : tc.result === 'fail' ? 'tc-fail' : tc.result === 'error' ? 'tc-error' : tc.result === 'tle' ? 'tc-tle' : ''}">
+          ${tc.result === 'ok'    ? `✅ 정답${tc.elapsed != null ? ` (${tc.elapsed}ms)` : ''}` :
+            tc.result === 'fail'  ? `❌ 오답${tc.elapsed != null ? ` (${tc.elapsed}ms)` : ''}` :
+            tc.result === 'error' ? `💥 ${escHtml(tc.errorLine || '런타임 에러')}` :
+            tc.result === 'tle'   ? '⏱ 시간 초과' : ''}
         </span>
         <button class="tc-run-btn" onclick="runOne(${i})">▶ 실행</button>
         <button class="tc-del-btn" onclick="delTestCase(${i})">✕</button>
@@ -394,10 +409,15 @@ function renderTestCases() {
           </div>
         </div>
         ${tc.result !== null ? `
-        <div>
+        ${tc.result === 'tle' ? `
+        <div class="tc-stderr-box tc-tle-box">⏱ 시간 제한(${currentProblem.time_limit})을 초과했습니다.</div>` :
+        tc.result === 'error' ? `
+        ${tc.actual ? `<div><div class="tc-col-label">출력</div><pre class="tc-actual-pre fail">${escHtml(tc.actual)}</pre></div>` : ''}
+        <div><div class="tc-col-label">오류</div><pre class="tc-stderr-box">${escHtml(tc.stderr)}</pre></div>` :
+        `<div>
           <div class="tc-col-label">실제 출력</div>
           <pre class="tc-actual-pre ${tc.result}">${escHtml(tc.actual)}</pre>
-        </div>` : ''}
+        </div>`}` : ''}
       </div>
     </div>`).join('');
 
@@ -411,6 +431,8 @@ function initTestCases(samples) {
     expected: s.output.trimEnd(),
     result: null,
     actual: '',
+    stderr: '',
+    errorLine: '',
     elapsed: null,
   }));
   renderTestCases();
@@ -435,13 +457,27 @@ async function runOne(idx) {
       }),
     });
     const d = await res.json();
-    const actual = (d.stdout || '').trimEnd();
-    tc.actual  = actual;
     tc.elapsed = d.elapsed_ms ?? null;
-    tc.result  = actual === tc.expected.trimEnd() ? 'ok' : 'fail';
+    if (d.status === 'TLE') {
+      tc.result = 'tle';
+      tc.actual = '';
+      tc.stderr = '';
+    } else if (d.status === 'ERROR') {
+      tc.result = 'error';
+      tc.actual = (d.stdout || '').trimEnd();
+      tc.stderr = (d.stderr || '').trimEnd();
+      const lines = tc.stderr.split('\n').map(l => l.trim()).filter(Boolean);
+      tc.errorLine = lines[lines.length - 1] || '알 수 없는 오류';
+    } else {
+      tc.actual  = (d.stdout || '').trimEnd();
+      tc.stderr  = '';
+      tc.result  = tc.actual === tc.expected.trimEnd() ? 'ok' : 'fail';
+    }
   } catch (e) {
-    tc.result = 'fail';
-    tc.actual = '서버 오류';
+    tc.result = 'error';
+    tc.actual = '';
+    tc.stderr = '서버 오류: ' + e.message;
+    tc.errorLine = '서버 오류';
     tc.elapsed = null;
   }
   renderTestCases();
@@ -460,7 +496,7 @@ async function runAll() {
 function addTestCase() {
   syncFromDom();
   const n = testCases.filter(tc => tc.label.startsWith('커스텀')).length + 1;
-  testCases.push({ label: `커스텀 ${n}`, input: '', expected: '', result: null, actual: '', elapsed: null });
+  testCases.push({ label: `커스텀 ${n}`, input: '', expected: '', result: null, actual: '', stderr: '', errorLine: '', elapsed: null });
   renderTestCases();
 }
 
