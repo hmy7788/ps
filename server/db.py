@@ -20,6 +20,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE problems ADD COLUMN solved INTEGER DEFAULT 0")
     if "solved_at" not in cols:
         conn.execute("ALTER TABLE problems ADD COLUMN solved_at TEXT")
+    if "favorite" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN favorite INTEGER DEFAULT 0")
     conn.commit()
 
 
@@ -39,6 +41,7 @@ def get_problems(
     page: int,
     size: int,
     solved_only: bool = False,
+    favorite_only: bool = False,
 ) -> tuple[int, list[dict]]:
     conditions: list[str] = []
     params: list[Any] = []
@@ -61,6 +64,9 @@ def get_problems(
     if solved_only:
         conditions.append("solved = 1")
 
+    if favorite_only:
+        conditions.append("favorite = 1")
+
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total = conn.execute(
@@ -71,7 +77,7 @@ def get_problems(
     rows = conn.execute(
         f"""
         SELECT id, title, level, tags, time_limit, memory_limit,
-               accepted_user_count, solved
+               accepted_user_count, solved, favorite
         FROM problems {where}
         ORDER BY level ASC, id ASC
         LIMIT ? OFFSET ?
@@ -87,7 +93,7 @@ def get_problem_detail(conn: sqlite3.Connection, problem_id: int) -> dict | None
         """
         SELECT id, title, level, tags, description, input_desc, output_desc,
                samples, time_limit, memory_limit, accepted_user_count, average_tries,
-               solved, solved_at
+               solved, solved_at, favorite
         FROM problems WHERE id = ?
         """,
         (problem_id,),
@@ -101,6 +107,17 @@ def mark_solved(conn: sqlite3.Connection, problem_id: int) -> None:
         (datetime.now(timezone.utc).isoformat(), problem_id),
     )
     conn.commit()
+
+
+def toggle_favorite(conn: sqlite3.Connection, problem_id: int) -> bool:
+    """즐겨찾기 상태를 토글하고 변경 후 상태(True/False)를 반환."""
+    row = conn.execute("SELECT favorite FROM problems WHERE id=?", (problem_id,)).fetchone()
+    if row is None:
+        raise ValueError("problem not found")
+    new_val = 0 if row["favorite"] else 1
+    conn.execute("UPDATE problems SET favorite=? WHERE id=?", (new_val, problem_id))
+    conn.commit()
+    return bool(new_val)
 
 
 def sync_solved_from_fs(conn: sqlite3.Connection, root: Path) -> int:

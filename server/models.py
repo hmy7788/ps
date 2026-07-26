@@ -11,6 +11,7 @@ class ProblemSummary(BaseModel):
     memory_limit: str
     accepted_user_count: int | None
     solved: int = 0
+    favorite: int = 0
 
 
 class Sample(BaseModel):
