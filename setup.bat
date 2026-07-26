@@ -7,19 +7,35 @@ echo   PS Platform 초기 설정
 echo ================================
 echo.
 
-:: Python 확인 (python → py 순서로 시도)
+:: Python 확인 (PATH → py → 일반 설치 경로 순으로 탐색)
 set PYTHON_CMD=
+
 python --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=python
-) else (
+if not errorlevel 1 set PYTHON_CMD=python
+
+if "%PYTHON_CMD%"=="" (
     py --version >nul 2>&1
-    if not errorlevel 1 (
-        set PYTHON_CMD=py
+    if not errorlevel 1 set PYTHON_CMD=py
+)
+
+:: PATH에 없으면 일반적인 설치 위치에서 직접 탐색
+if "%PYTHON_CMD%"=="" (
+    for %%V in (313 312 311 310 39) do (
+        if "%PYTHON_CMD%"=="" (
+            if exist "%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe" (
+                set PYTHON_CMD="%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe"
+            )
+        )
+        if "%PYTHON_CMD%"=="" (
+            if exist "%PROGRAMFILES%\Python%%V\python.exe" (
+                set PYTHON_CMD="%PROGRAMFILES%\Python%%V\python.exe"
+            )
+        )
     )
 )
+
 if "%PYTHON_CMD%"=="" (
-    echo [오류] Python이 설치되어 있지 않거나 PATH에 없습니다.
+    echo [오류] Python을 찾을 수 없습니다.
     echo https://www.python.org 에서 설치 후 다시 실행하세요.
     echo [팁] 설치 시 "Add Python to PATH" 옵션을 반드시 체크하세요.
     pause
