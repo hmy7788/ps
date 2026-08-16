@@ -18,4 +18,5 @@ def solution(nums):
         if(no not in check and count < len(nums) // 2):
             check.add(no)
             count += 1
+            
     return count
