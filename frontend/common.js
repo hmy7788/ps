@@ -376,5 +376,15 @@ function tagKo(tag) { return TAG_KO[tag] || tag; }
 function lvClass(l) { return l<=10 ? 'lv-silver' : l<=15 ? 'lv-gold' : 'lv-plat'; }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// 하트비트: 5초마다 서버에 생존 신호 전송
-setInterval(() => fetch('/api/heartbeat', { method: 'POST' }).catch(() => {}), 5000);
+// 하트비트: 5초마다 서버에 생존 신호 전송 (탭 전환 등으로 지연될 수 있어 안전장치 용도)
+function sendHeartbeat() {
+  fetch('/api/heartbeat', { method: 'POST' }).catch(() => {});
+}
+sendHeartbeat();
+setInterval(sendHeartbeat, 5000);
+
+// 탭이 실제로 떠날 때(닫기/새로고침/다른 페이지 이동) 서버에 "떠남" 신호 전송.
+// 같은 사이트 내 다른 페이지로 이동한 경우엔 새 페이지의 heartbeat가 곧바로 도착해 서버가 종료를 취소함.
+window.addEventListener('pagehide', () => {
+  navigator.sendBeacon('/api/heartbeat/leaving');
+});
