@@ -15,6 +15,11 @@ def _draft_path(problem_id: int) -> Path:
     return DRAFTS_DIR / f"{problem_id}.json"
 
 
+def list_draft_ids() -> set[int]:
+    """드래프트가 남아있는 problem_id 집합 (풀고 있는 문제 필터용)."""
+    return {int(p.stem) for p in DRAFTS_DIR.glob("*.json") if p.stem.isdigit()}
+
+
 class DraftRequest(BaseModel):
     code: str
 

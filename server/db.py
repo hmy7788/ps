@@ -42,7 +42,10 @@ def get_problems(
     size: int,
     solved_only: bool = False,
     favorite_only: bool = False,
+    in_progress_only: bool = False,
+    draft_ids: set[int] | None = None,
 ) -> tuple[int, list[dict]]:
+    draft_ids = draft_ids or set()
     conditions: list[str] = []
     params: list[Any] = []
 
@@ -67,6 +70,13 @@ def get_problems(
     if favorite_only:
         conditions.append("favorite = 1")
 
+    if in_progress_only:
+        if not draft_ids:
+            return 0, []
+        placeholders = ",".join("?" * len(draft_ids))
+        conditions.append(f"id IN ({placeholders})")
+        params += list(draft_ids)
+
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
     total = conn.execute(
@@ -85,7 +95,10 @@ def get_problems(
         params + [size, offset],
     ).fetchall()
 
-    return total, [_parse_row(r) for r in rows]
+    items = [_parse_row(r) for r in rows]
+    for item in items:
+        item["in_progress"] = item["id"] in draft_ids
+    return total, items
 
 
 def get_problem_detail(conn: sqlite3.Connection, problem_id: int) -> dict | None:

@@ -36,6 +36,13 @@ header { position: sticky; top: 0; z-index: 10; }
   background: color-mix(in srgb, var(--ok) 12%, var(--surface));
 }
 
+/* 풀고 있는 문제만 필터 */
+.inprogress-filter-btn.active {
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 55%, var(--border));
+  background: color-mix(in srgb, var(--purple) 12%, var(--surface));
+}
+
 /* 필터 드롭다운 */
 .filter-wrap { position: relative; }
 
@@ -153,6 +160,11 @@ header { position: sticky; top: 0; z-index: 10; }
 .card-top { display: flex; align-items: center; gap: 8px; }
 .pid { font-size: 13px; color: var(--text-dim); }
 .ptitle { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.draft-badge {
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
+  color: var(--purple);
+}
 
 .fav-filter-btn.active {
   color: var(--favorite);

@@ -12,6 +12,7 @@ class ProblemSummary(BaseModel):
     accepted_user_count: int | None
     solved: int = 0
     favorite: int = 0
+    in_progress: bool = False
 
 
 class Sample(BaseModel):
