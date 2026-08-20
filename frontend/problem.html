@@ -193,6 +193,10 @@ require(['vs/editor/editor.main'], () => {
     tabSize: 4,
   });
   editor.onDidChangeModelContent(scheduleDraftSave);
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+    switchTab('run');
+    runAll();
+  });
   document.getElementById('save-memo-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') saveSolution();
     if (e.key === 'Escape') hideSaveMemoForm();
@@ -486,6 +490,7 @@ async function runOne(idx) {
 async function runAll() {
   if (!editor || !currentProblem) return;
   const btn = document.getElementById('run-all-btn');
+  if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = '⏳ 실행 중...';
   for (let i = 0; i < testCases.length; i++) await runOne(i);
