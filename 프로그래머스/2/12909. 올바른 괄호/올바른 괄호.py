@@ -5,10 +5,10 @@ def solution(s):
         if(i == '('):
             stack.append('(')
         else:
-            if(not(stack)):
-                return False
+            if stack and stack.pop() == '(':
+                continue
             else:
-                stack.pop()
-    if(not(stack)):
-        return True
-    return False
+                return False
+    if stack:
+        return False
+    return True
