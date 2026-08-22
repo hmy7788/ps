@@ -60,7 +60,34 @@ print(l[1])
 - 한글을 출력하고 나서 에러가 나는 코드(`print("안녕"); print(l[1])`)도 `stdout`/`stderr` 둘 다 깨지지 않고 정상 디코딩됨을 확인.
 - 실제 Chrome 브라우저로 `/problem?id=1074`에서 에디터에 위 재현 코드를 넣고 "실행" → 화면에 `IndexError: list index out of range` 트레이스백이 정상적으로 표시되는 것 확인 (이전엔 "서버 오류: ... is not valid JSON"만 떴음).
 
+## 후속: 트레이스백을 마지막 줄만 남기도록 단순화
+
+인코딩 크래시를 고치고 나니 이번엔 정상적으로 전체 트레이스백이 뜨긴 하는데,
+```
+Traceback (most recent call last):
+  File "C:\Users\한국전~1\AppData\Local\Temp\tmpmvditexp.py", line 4, in <module>
+    print(a)
+NameError: name 'a' is not defined
+```
+처럼 사용자에게 의미 없는 임시파일 경로/스택프레임까지 그대로 노출되는 문제가 남아있었다.
+`server/utils.py`에 `last_error_line(stderr)` 헬퍼를 추가해서 — 빈 줄을 제외한 마지막
+줄(실제 예외 메시지, 예: `NameError: name 'a' is not defined`)만 남기고 나머지는 버림.
+`server/routers/run.py`의 `run_code()`에서 `status == "ERROR"`일 때만 적용.
+
+프론트(`problem.html`)는 원래부터 `stderr`의 마지막 줄을 뽑아 `💥 배지`로 보여주고 있었기
+때문에 프론트 코드는 손댈 필요가 없었다 — 서버가 이미 한 줄만 주면 배지와 오류 박스가
+자동으로 동일한 한 줄만 보여주게 됨.
+
+### 검증
+- curl: `print(a)` → `{"status":"ERROR", "stderr":"NameError: name 'a' is not defined", ...}` (트레이스백/경로 없이 딱 한 줄).
+- Chrome에서 `/problem?id=1074` 실제 렌더링 확인: "오류" 박스에 `NameError: name 'a' is not defined` 한 줄만 표시됨.
+
+### 트레이드오프
+여러 줄짜리 코드에서 몇 번째 줄에서 에러가 났는지(라인 번호)는 이제 안 보인다. 짧은 풀이
+코드가 대부분이라 지금은 문제 없다고 판단했지만, 나중에 코드가 길어져서 "몇 번째 줄인지"가
+필요해지면 `last_error_line` 대신 라인 번호만 남기고 임시파일 경로만 지우는 방식으로
+바꿔야 할 수 있음.
+
 ## 남아있는 개선 여지 (미구현)
 
-- 트레이스백에 찍히는 임시파일 절대경로(`C:\Users\한국전~1\AppData\Local\Temp\tmpXXXX.py`)는 사용자에게 의미 없는 정보 — `harness`의 `_clean_traceback_paths()`처럼 파일명만 남기고 정리하면 더 깔끔해짐.
-- `/api/problems/{id}/submit`(채점) 경로도 내부적으로 `server/utils.py::run_one`을 공유하므로 이번 수정으로 같이 고쳐졌지만, 별도로 다시 검증하진 않음.
+- `/api/problems/{id}/submit`(채점) 경로도 내부적으로 `server/utils.py::run_one`을 공유하므로 인코딩 수정은 같이 적용됐지만, `last_error_line`은 `run.py`(실행 탭)에만 적용했다 — 제출 탭은 애초에 stderr를 사용자에게 보여주지 않기 때문.

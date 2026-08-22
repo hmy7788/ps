@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter
 
 from server.models import RunRequest, RunResponse
-from server.utils import parse_time_limit
+from server.utils import last_error_line, parse_time_limit
 
 router = APIRouter(prefix="/api")
 
@@ -41,10 +41,11 @@ def run_code(req: RunRequest):
             elapsed_ms = (time.perf_counter() - start) * 1000
 
             status = "OK" if result.returncode == 0 else "ERROR"
+            stderr = last_error_line(result.stderr) if status == "ERROR" else result.stderr
             return RunResponse(
                 status=status,
                 stdout=result.stdout,
-                stderr=result.stderr,
+                stderr=stderr,
                 elapsed_ms=round(elapsed_ms, 2),
                 time_limit_ms=round(python_limit * 1000, 0),
                 raw_time_limit=req.time_limit,

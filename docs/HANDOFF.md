@@ -105,6 +105,7 @@ Chrome으로 실제 렌더링 확인 완료 (하드리프레시 후 정상 표�
 - **증상**: `/api/run`에서 `IndexError` 등 진짜 런타임 에러가 나면 실제 메시지 대신 `서버 오류: Unexpected token 'I', "Internal S"... is not valid JSON`만 뜸.
 - **원인**: 자식 파이썬 프로세스가 Windows 콘솔 기본 코드페이지(cp949)로 stderr를 인코딩하는데, 부모(서버)는 UTF-8로 엄격 디코딩. 트레이스백에 항상 찍히는 임시파일 경로에 이 컴퓨터의 한글 계정명이 섞여있어서 디코딩이 실패 → `stderr`가 `None`이 되어 Pydantic 검증 실패 → 500 에러 → 프론트가 그걸 JSON으로 파싱하려다 실패한 에러가 대신 뜸.
 - **해결**: `server/routers/run.py`, `server/utils.py`의 `subprocess.run`에 `-X utf8`(자식 프로세스 UTF-8 강제) + `errors="replace"`(디코딩 실패해도 안 죽게) 추가. `harness` 브랜치가 똑같은 버그를 먼저 겪고 `docs/failures/002-...md`에 남겨둔 해결책을 그대로 적용.
+- **후속**: 인코딩 크래시는 고쳤는데 트레이스백 전체(임시파일 경로·스택프레임 포함)가 그대로 뜨는 게 여전히 안 예뻐서, `server/utils.py::last_error_line()`로 마지막 줄(실제 예외 메시지)만 남기게 추가 수정. 프론트는 원래도 마지막 줄만 뽑아 배지로 보여주고 있어서 손댈 필요 없었음.
 - 상세: `docs/subprocess-stderr-encoding-fix.md`. curl 재현 + 실제 Chrome에서 `/problem?id=1074`로 검증 완료.
 
 ---

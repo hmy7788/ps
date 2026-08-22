@@ -27,6 +27,12 @@ def strip_html(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def last_error_line(stderr: str) -> str:
+    """트레이스백에서 임시파일 경로·스택프레임을 다 걷어내고 마지막 줄(실제 예외 메시지)만 남긴다."""
+    lines = [line for line in stderr.splitlines() if line.strip()]
+    return lines[-1] if lines else stderr
+
+
 def run_one(code: str, stdin: str, limit_sec: float) -> dict:
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".py", delete=False, encoding="utf-8"
