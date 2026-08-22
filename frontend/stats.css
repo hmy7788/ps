@@ -139,6 +139,57 @@ main {
 
 .empty { font-size: 14px; color: var(--text-dim); padding: 12px 0; }
 
+/* 레벨 */
+.level-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.level-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.level-num { font-size: 22px; font-weight: 800; }
+.level-label { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+.level-badge.bronze   .level-num, .level-badge.bronze   .level-label { color: var(--bronze); }
+.level-badge.silver   .level-num, .level-badge.silver   .level-label { color: var(--silver); }
+.level-badge.gold     .level-num, .level-badge.gold     .level-label { color: var(--gold); }
+.level-badge.platinum .level-num, .level-badge.platinum .level-label { color: var(--platinum); }
+.level-badge.diamond  .level-num, .level-badge.diamond  .level-label { color: var(--diamond); }
+.level-badge.ruby     .level-num, .level-badge.ruby     .level-label { color: var(--ruby); }
+
+.level-progress-wrap { flex: 1; min-width: 200px; }
+.level-track { height: 18px; }
+.level-exp-text { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+.levelup-history { margin-top: 16px; max-height: 200px; overflow-y: auto; }
+.levelup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.levelup-item:last-child { border-bottom: none; }
+.levelup-date { color: var(--text-dim); min-width: 52px; font-size: 12px; }
+.levelup-label { font-weight: 700; }
+.levelup-label.bronze   { color: var(--bronze); }
+.levelup-label.silver   { color: var(--silver); }
+.levelup-label.gold     { color: var(--gold); }
+.levelup-label.platinum { color: var(--platinum); }
+.levelup-label.diamond  { color: var(--diamond); }
+.levelup-label.ruby     { color: var(--ruby); }
+
 /* 히트맵 */
 .stat-box-title-row {
   display: flex;

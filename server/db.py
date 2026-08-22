@@ -205,6 +205,92 @@ def get_heatmap_and_streak(conn: sqlite3.Connection) -> dict:
     }
 
 
+TIER_NAMES = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"]
+ROMAN = ["V", "IV", "III", "II", "I"]
+MAX_LEVEL = 30
+
+# 문제 1개 풀 때 얻는 경험치: 10 * (문제레벨 ^ 1.5)
+EXP_BASE_MULT = 10
+EXP_LEVEL_POW = 1.5
+# 내 레벨보다 5 이상 낮은 문제는 경험치 10%만 인정 (쉬운 문제 우려먹기 방지)
+PENALTY_GAP = 5
+PENALTY_MULT = 0.1
+# 레벨 L 도달에 필요한 누적 경험치: 30 * (L ^ 2.5)
+LEVEL_THRESHOLD_MULT = 30
+LEVEL_THRESHOLD_POW = 2.5
+
+
+def level_label(level: int) -> str:
+    if level <= 0:
+        return "Unrated"
+    level = min(level, MAX_LEVEL)
+    tier_idx = (level - 1) // 5
+    sub_idx = (level - 1) % 5
+    return f"{TIER_NAMES[tier_idx]} {ROMAN[sub_idx]}"
+
+
+def level_class(level: int) -> str:
+    if level <= 0:
+        return "unrated"
+    tier_idx = min((level - 1) // 5, len(TIER_NAMES) - 1)
+    return TIER_NAMES[tier_idx].lower()
+
+
+def _exp_for_problem(problem_level: int, user_level: int) -> float:
+    base = EXP_BASE_MULT * (problem_level ** EXP_LEVEL_POW)
+    if problem_level <= user_level - PENALTY_GAP:
+        base *= PENALTY_MULT
+    return base
+
+
+def _threshold(level: int) -> float:
+    if level <= 0:
+        return 0.0
+    return LEVEL_THRESHOLD_MULT * (level ** LEVEL_THRESHOLD_POW)
+
+
+def get_user_level(conn: sqlite3.Connection) -> dict:
+    """solved.ac 스타일 유저 레벨: 푼 문제 난이도를 경험치로 환산해 누적."""
+    rows = conn.execute(
+        """SELECT id, level, solved_at FROM problems
+           WHERE solved = 1
+           ORDER BY (solved_at IS NULL), solved_at ASC, id ASC"""
+    ).fetchall()
+
+    level = 0
+    exp = 0.0
+    level_ups: list[dict] = []
+
+    for row in rows:
+        exp += _exp_for_problem(row["level"], level)
+        while level < MAX_LEVEL and exp >= _threshold(level + 1):
+            level += 1
+            level_ups.append({
+                "level": level,
+                "label": level_label(level),
+                "at": row["solved_at"],
+                "problem_id": row["id"],
+            })
+
+    cur_threshold = _threshold(level)
+    next_threshold = _threshold(level + 1) if level < MAX_LEVEL else None
+    if next_threshold is not None:
+        progress = (exp - cur_threshold) / (next_threshold - cur_threshold)
+    else:
+        progress = 1.0
+
+    return {
+        "level": level,
+        "label": level_label(level),
+        "class": level_class(level),
+        "exp": round(exp, 1),
+        "cur_threshold": round(cur_threshold, 1),
+        "next_threshold": round(next_threshold, 1) if next_threshold is not None else None,
+        "progress_pct": round(max(0.0, min(1.0, progress)) * 100, 1),
+        "level_up_history": list(reversed(level_ups[-20:])),
+    }
+
+
 def get_stats(conn: sqlite3.Connection) -> dict:
     # 총 풀었던 수
     total = conn.execute("SELECT COUNT(*) FROM problems WHERE solved=1").fetchone()[0]

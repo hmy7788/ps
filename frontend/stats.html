@@ -18,6 +18,9 @@
   <!-- 요약 카드 -->
   <section class="summary-cards" id="summary-cards"></section>
 
+  <!-- 레벨 -->
+  <div class="stat-box" id="level-box"></div>
+
   <!-- 히트맵 -->
   <div class="stat-box">
     <div class="stat-box-title-row">
@@ -71,16 +74,59 @@ const GRADE_RANGES = [
   { label: 'Ruby',     levels: [26,27,28,29,30],    cls: 'ruby' },
 ];
 
+function tierClassOf(level) {
+  if (level <= 0) return 'unrated';
+  const idx = Math.min(Math.floor((level - 1) / 5), 5);
+  return ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'ruby'][idx];
+}
+
 async function load() {
-  const [data, heatData] = await Promise.all([
+  const [data, heatData, levelData] = await Promise.all([
     fetch('/api/stats').then(r => r.json()),
     fetch('/api/stats/heatmap').then(r => r.json()),
+    fetch('/api/stats/level').then(r => r.json()),
   ]);
   renderSummary(data, heatData.streak);
   renderHeatmap(heatData.heatmap);
+  renderLevel(levelData);
   renderLevelChart(data.by_level);
   renderTagChart(data.top_tags);
   renderRecent(data.recent);
+}
+
+function renderLevel(lv) {
+  const historyHtml = lv.level_up_history.length
+    ? lv.level_up_history.map(h => {
+        const date = h.at ? new Date(h.at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '';
+        return `
+          <div class="levelup-item">
+            <span class="levelup-date">${date}</span>
+            <span class="levelup-label ${tierClassOf(h.level)}">${h.label}</span>
+            <span>달성 (#${h.problem_id})</span>
+          </div>`;
+      }).join('')
+    : '<div class="empty">아직 레벨업 기록이 없습니다.</div>';
+
+  const expText = lv.next_threshold !== null
+    ? `EXP ${lv.exp} / ${lv.next_threshold} (다음 레벨까지 ${lv.progress_pct}%)`
+    : `EXP ${lv.exp} (MAX 레벨)`;
+
+  document.getElementById('level-box').innerHTML = `
+    <div class="stat-box-title">내 레벨</div>
+    <div class="level-main">
+      <div class="level-badge ${lv.class}">
+        <div class="level-num">Lv.${lv.level}</div>
+        <div class="level-label">${lv.label}</div>
+      </div>
+      <div class="level-progress-wrap">
+        <div class="bar-track level-track">
+          <div class="bar-fill ${lv.class}" style="width:${lv.progress_pct}%"></div>
+        </div>
+        <div class="level-exp-text">${expText}</div>
+      </div>
+    </div>
+    <div class="levelup-history">${historyHtml}</div>
+  `;
 }
 
 function renderHeatmap(heatmap) {
