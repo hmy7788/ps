@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 import sqlite3
 
-from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats, get_heatmap_and_streak, toggle_favorite
+from server.db import get_conn, get_problems, get_problem_detail, get_all_tags, get_stats, get_heatmap_and_streak, get_user_level, toggle_favorite
 from server.models import ProblemListResponse, ProblemDetail, ProblemSummary
 from server.routers.drafts import list_draft_ids
 
@@ -100,3 +100,8 @@ def stats(conn: sqlite3.Connection = Depends(db)):
 @router.get("/stats/heatmap")
 def heatmap(conn: sqlite3.Connection = Depends(db)):
     return get_heatmap_and_streak(conn)
+
+
+@router.get("/stats/level")
+def user_level(conn: sqlite3.Connection = Depends(db)):
+    return get_user_level(conn)
