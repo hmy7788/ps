@@ -11,7 +11,6 @@
 
 <header>
   <a class="logo" href="/">PS Platform</a>
-  <a class="level-badge-mini" id="level-badge-mini" href="/stats"></a>
   <a class="stats-link" href="/stats">📊 통계</a>
   <input class="search-input" id="search-input" type="text" placeholder="🔍  문제 번호 또는 제목 검색...">
 
@@ -49,6 +48,12 @@
   <button class="filter-btn inprogress-filter-btn" id="inprogress-only-btn" onclick="onInProgressChange()">
     📝 풀고 있는 문제만
   </button>
+
+  <button class="filter-btn custom-filter-btn" id="custom-only-btn" onclick="onCustomChange()">
+    🛠 내가 만든 문제만
+  </button>
+
+  <a class="stats-link" href="/create">🛠 문제 만들기</a>
 </header>
 
 <div id="list-info">로딩 중...</div>
@@ -57,7 +62,7 @@
 
 <script src="/static/common.js"></script>
 <script>
-const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false, favoriteOnly:false, inProgressOnly:false };
+const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:false, favoriteOnly:false, inProgressOnly:false, customOnly:false };
 
 (function restoreFromUrl() {
   const _qs = new URLSearchParams(location.search);
@@ -68,20 +73,10 @@ const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:fals
   if (_qs.get('solved'))   st.solvedOnly  = true;
   if (_qs.get('favorite')) st.favoriteOnly = true;
   if (_qs.get('in_progress')) st.inProgressOnly = true;
+  if (_qs.get('custom'))   st.customOnly  = true;
 })();
 
 let allTags = [];
-
-async function loadLevelBadge() {
-  try {
-    const lv = await fetch('/api/stats/level').then(r => r.json());
-    const el = document.getElementById('level-badge-mini');
-    el.textContent = `Lv.${lv.level} ${lv.label}`;
-    el.className = `level-badge-mini ${lv.class}`;
-  } catch (e) {
-    // 배지는 부가 기능이라 실패해도 조용히 무시
-  }
-}
 
 async function loadTags() {
   allTags = await fetch('/api/tags').then(r => r.json());
@@ -127,6 +122,7 @@ if (st.q) document.getElementById('search-input').value = st.q;
 if (st.solvedOnly) document.getElementById('solved-only-btn').classList.add('active');
 if (st.favoriteOnly) document.getElementById('favorite-only-btn').classList.add('active');
 if (st.inProgressOnly) document.getElementById('inprogress-only-btn').classList.add('active');
+if (st.customOnly) document.getElementById('custom-only-btn').classList.add('active');
 (function syncCntBadges() {
   const tc = document.getElementById('tag-cnt');
   tc.textContent = st.tags.length;
@@ -162,6 +158,12 @@ function onInProgressChange() {
   st.page = 1; loadProblems();
 }
 
+function onCustomChange() {
+  st.customOnly = !st.customOnly;
+  document.getElementById('custom-only-btn').classList.toggle('active', st.customOnly);
+  st.page = 1; loadProblems();
+}
+
 async function toggleFavorite(e, id) {
   e.preventDefault();
   e.stopPropagation();
@@ -182,6 +184,7 @@ async function loadProblems() {
   if (st.solvedOnly)    p.set('solved', '1');
   if (st.favoriteOnly)  p.set('favorite', '1');
   if (st.inProgressOnly) p.set('in_progress', '1');
+  if (st.customOnly)    p.set('custom', '1');
   p.set('page', st.page); p.set('size', st.size);
 
   const data = await fetch('/api/problems?' + p).then(r => r.json());
@@ -200,15 +203,17 @@ function _filterParams() {
   if (st.solvedOnly)    p.set('solved',   '1');
   if (st.favoriteOnly)  p.set('favorite', '1');
   if (st.inProgressOnly) p.set('in_progress', '1');
+  if (st.customOnly)    p.set('custom', '1');
   return p.toString();
 }
 
 function resetFilter() {
-  st.q = ''; st.tags = []; st.levels = []; st.solvedOnly = false; st.favoriteOnly = false; st.inProgressOnly = false; st.page = 1;
+  st.q = ''; st.tags = []; st.levels = []; st.solvedOnly = false; st.favoriteOnly = false; st.inProgressOnly = false; st.customOnly = false; st.page = 1;
   document.getElementById('search-input').value = '';
   document.getElementById('solved-only-btn').classList.remove('active');
   document.getElementById('favorite-only-btn').classList.remove('active');
   document.getElementById('inprogress-only-btn').classList.remove('active');
+  document.getElementById('custom-only-btn').classList.remove('active');
   document.querySelectorAll('#tag-list input').forEach(e => e.checked = false);
   document.querySelectorAll('#lv-list input').forEach(e => e.checked = false);
   document.getElementById('tag-cnt').classList.remove('show');
@@ -228,9 +233,10 @@ function renderGrid(items) {
   el.innerHTML = items.map(p => `
     <a class="prob-card${p.solved ? ' solved' : ''}${p.favorite ? ' favorited' : ''}" href="/problem?id=${p.id}&${_filterParams()}">
       <div class="card-top">
-        <span class="pid">#${p.id}</span>
+        ${p.is_custom ? '' : `<span class="pid">#${p.id}</span>`}
         <span class="ptitle">${escHtml(p.title)}</span>
         ${p.in_progress ? '<span class="badge draft-badge" title="풀고 있는 문제">📝</span>' : ''}
+        ${p.is_custom ? '<span class="badge custom-badge" title="내가 만든 문제">🛠 커스텀</span>' : ''}
         <span class="badge ${lvClass(p.level)}">${LV_LABEL[p.level]}</span>
         <span class="fav-star${p.favorite ? ' active' : ''}" onclick="toggleFavorite(event, ${p.id})">${p.favorite ? '⭐' : '☆'}</span>
       </div>
@@ -289,7 +295,6 @@ document.getElementById('search-input').addEventListener('input', e => {
 
 loadTags();
 loadProblems();
-loadLevelBadge();
 </script>
 </body>
 </html>

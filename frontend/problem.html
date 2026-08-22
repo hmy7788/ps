@@ -18,6 +18,17 @@
   <span class="meta-chip" id="prob-time"></span>
   <span class="meta-chip" id="prob-mem"></span>
   <span class="meta-chip" id="prob-users"></span>
+  <div class="custom-actions" id="custom-actions" style="display:none">
+    <div class="custom-actions-default" id="custom-actions-default">
+      <a class="custom-action-btn" id="edit-custom-btn">✏️ 수정</a>
+      <button class="custom-action-btn custom-action-danger" id="delete-custom-btn" onclick="toggleDeleteConfirm()">🗑 삭제</button>
+    </div>
+    <div class="custom-actions-confirm" id="custom-actions-confirm">
+      <span>삭제할까요?</span>
+      <button class="popover-danger-btn" onclick="deleteCustomProblem()">삭제</button>
+      <button class="popover-ghost-btn" onclick="toggleDeleteConfirm()">취소</button>
+    </div>
+  </div>
 </header>
 
 <div id="layout">
@@ -173,7 +184,7 @@ const problemId = _qs.get('id');
 if (!problemId) location.href = '/';
 (function restoreBackBtn() {
   const back = new URLSearchParams();
-  ['page','q','tags','levels','solved','favorite'].forEach(k => {
+  ['page','q','tags','levels','solved','favorite','custom'].forEach(k => {
     const v = _qs.get(k);
     if (v) back.set(k, v);
   });
@@ -259,9 +270,10 @@ async function discardDraft() {
 async function loadProblem() {
   const p = await fetch(`/api/problems/${problemId}`).then(r => r.json());
   currentProblem = p;
-  document.title = `#${p.id} ${p.title} - PS Platform`;
+  const titleLabel = p.is_custom ? p.title : `#${p.id} ${p.title}`;
+  document.title = `${titleLabel} - PS Platform`;
 
-  document.getElementById('prob-title-header').textContent = `#${p.id} ${p.title}`;
+  document.getElementById('prob-title-header').textContent = titleLabel;
   const star = document.getElementById('fav-star');
   star.textContent = p.favorite ? '⭐' : '☆';
   star.classList.toggle('active', !!p.favorite);
@@ -275,6 +287,11 @@ async function loadProblem() {
     users.textContent = `✅ ${p.accepted_user_count.toLocaleString()}명`;
   } else {
     users.style.display = 'none';
+  }
+
+  if (p.is_custom) {
+    document.getElementById('custom-actions').style.display = '';
+    document.getElementById('edit-custom-btn').href = `/create?id=${p.id}`;
   }
 
   document.getElementById('desc-body').innerHTML   = p.description;
@@ -688,6 +705,26 @@ async function saveSolution() {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = `❌ ${e.message}`;
+  }
+}
+
+/* ── 커스텀 문제 삭제 ─────────────────────────────────── */
+function toggleDeleteConfirm() {
+  const def = document.getElementById('custom-actions-default');
+  const confirmRow = document.getElementById('custom-actions-confirm');
+  const showingConfirm = confirmRow.classList.contains('open');
+  confirmRow.classList.toggle('open', !showingConfirm);
+  def.style.display = showingConfirm ? '' : 'none';
+}
+
+async function deleteCustomProblem() {
+  if (!currentProblem) return;
+  const res = await fetch(`/api/custom-problems/${currentProblem.id}`, { method: 'DELETE' });
+  if (res.ok) {
+    location.href = '/';
+  } else {
+    const data = await res.json().catch(() => ({}));
+    document.getElementById('custom-actions-confirm').innerHTML = `<span>❌ ${escHtml(data.detail || '삭제 실패')}</span>`;
   }
 }
 

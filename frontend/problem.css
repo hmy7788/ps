@@ -17,6 +17,66 @@ header { gap: 10px; padding: 0 16px; overflow: hidden; }
 
 header .fav-star { font-size: 18px; }
 
+.custom-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.custom-actions-default {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-action-btn {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.custom-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.custom-action-danger:hover { border-color: var(--err); color: var(--err); }
+
+.custom-actions-confirm {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.custom-actions-confirm.open { display: flex; }
+
+.popover-danger-btn {
+  padding: 4px 12px;
+  background: var(--err);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.popover-danger-btn:hover { filter: brightness(1.15); }
+
+.popover-ghost-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+.popover-ghost-btn:hover { border-color: var(--text-dim); color: var(--text); }
+
 .meta-chip {
   font-size: 12px;
   padding: 2px 8px;
@@ -61,16 +121,16 @@ header .fav-star { font-size: 18px; }
 .section-title:first-child { margin-top: 0; }
 .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0 0; }
 
-#prob-desc p { line-height: 1.75; margin-bottom: 8px; color: #ccc; }
+#prob-desc p { line-height: 1.75; margin-bottom: 14px; color: #ccc; }
 #prob-desc ol, #prob-desc ul {
   padding-left: 22px;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
   color: #ccc;
 }
-#prob-desc li { line-height: 1.75; margin-bottom: 4px; }
+#prob-desc li { line-height: 1.75; margin-bottom: 6px; }
 #prob-desc li > ol, #prob-desc li > ul {
-  margin-top: 4px;
-  margin-bottom: 4px;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 #prob-desc ol ol { list-style-type: lower-alpha; }
 #prob-desc pre {
@@ -80,9 +140,9 @@ header .fav-star { font-size: 18px; }
   overflow-x: auto;
   font-size: 13px;
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
-#prob-desc table { border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+#prob-desc table { border-collapse: collapse; margin-bottom: 14px; font-size: 14px; }
 #prob-desc td, #prob-desc th { border: 1px solid var(--border); padding: 4px 10px; }
 #prob-desc img { max-width: 100%; border-radius: 4px; }
 #prob-desc sub, #prob-desc sup {
@@ -93,6 +153,44 @@ header .fav-star { font-size: 18px; }
 }
 #prob-desc sub { bottom: -0.25em; }
 #prob-desc sup { top: -0.5em; }
+
+/* 마크다운 렌더링(제목/인라인 코드/인용구) 여백·타이포 보강 */
+#prob-desc h1, #prob-desc h2, #prob-desc h3,
+#prob-desc h4, #prob-desc h5, #prob-desc h6 {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 4px 0 12px;
+}
+#prob-desc h1 { font-size: 1.4em; }
+#prob-desc h2 { font-size: 1.25em; }
+#prob-desc h3 { font-size: 1.1em; }
+#prob-desc h4, #prob-desc h5, #prob-desc h6 { font-size: 1em; }
+
+#prob-desc code {
+  background: var(--surface2);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 0.9em;
+}
+#prob-desc pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+#prob-desc blockquote {
+  margin: 0 0 14px;
+  padding: 4px 14px;
+  border-left: 3px solid var(--border);
+  color: var(--text-dim);
+}
+
+#prob-desc hr { border: none; border-top: 1px solid var(--border); margin: 4px 0 14px; }
+
+#desc-body > *:last-child,
+#desc-input > *:last-child,
+#desc-output > *:last-child {
+  margin-bottom: 0;
+}
 
 .sample-pair {
   border: 1px solid var(--border);

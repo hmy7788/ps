@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문제 만들기 - PS Platform</title>
+<link rel="stylesheet" href="/static/common.css">
+<link rel="stylesheet" href="/static/create.css">
+</head>
+<body>
+
+<header>
+  <a class="back-btn" id="back-btn" href="/">← 목록</a>
+  <div id="page-title">문제 만들기</div>
+</header>
+
+<div id="create-layout">
+  <form id="create-form" onsubmit="return false;">
+    <div class="form-row">
+      <label>제목</label>
+      <input type="text" id="f-title" placeholder="문제 제목" maxlength="100">
+    </div>
+
+    <div class="form-row form-row-inline">
+      <div>
+        <label>난이도</label>
+        <select id="f-level"></select>
+      </div>
+      <div>
+        <label>시간 제한</label>
+        <input type="text" id="f-time" value="2 초">
+      </div>
+      <div>
+        <label>메모리 제한</label>
+        <input type="text" id="f-memory" value="256 MB">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>태그</label>
+      <div class="tag-select-wrap">
+        <button type="button" class="tag-select-btn" onclick="toggleTagDropdown()">
+          태그 선택 <span class="cnt" id="tag-sel-cnt">0</span> ▾
+        </button>
+        <div class="tag-dropdown" id="tag-dropdown">
+          <input class="dd-search" type="text" placeholder="태그 검색..." oninput="renderTagOptions(this.value)">
+          <div class="dd-list-wrap"><div class="dd-list" id="tag-option-list"></div></div>
+        </div>
+      </div>
+      <div class="tag-selected-preview" id="tag-selected-preview"></div>
+    </div>
+
+    <div class="form-row">
+      <label>문제 설명 <span class="hint">— 마크다운 / HTML 문법 지원 (#, **굵게**, - 목록, 코드블록 등)</span></label>
+      <textarea id="f-description" rows="6" placeholder="문제 설명을 입력하세요. 마크다운 문법을 쓸 수 있습니다."></textarea>
+    </div>
+
+    <div class="form-row form-row-inline">
+      <div>
+        <label>입력 형식 <span class="hint">— 마크다운 지원</span></label>
+        <textarea id="f-input-desc" rows="4"></textarea>
+      </div>
+      <div>
+        <label>출력 형식 <span class="hint">— 마크다운 지원</span></label>
+        <textarea id="f-output-desc" rows="4"></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>예제 (샘플) <span class="hint">— 문제 페이지에 그대로 노출됩니다</span></label>
+      <div id="sample-list"></div>
+      <button type="button" class="add-row-btn" onclick="addRow('sample-list', sampleRows)">+ 예제 추가</button>
+    </div>
+
+    <div class="form-row">
+      <label>히든 테스트케이스 <span class="hint">— 채점(제출)에만 쓰이고 문제 페이지엔 노출되지 않습니다. 비워두면 예제로 채점합니다.</span></label>
+      <div id="hidden-list"></div>
+      <button type="button" class="add-row-btn" onclick="addRow('hidden-list', hiddenRows)">+ 히든 테케 추가</button>
+    </div>
+
+    <div id="form-error" class="form-error"></div>
+
+    <div class="form-actions">
+      <button type="button" id="submit-btn" class="primary-btn" onclick="submitForm()">만들기</button>
+      <button type="button" id="delete-btn" class="danger-btn" style="display:none" onclick="toggleDeleteConfirm()">삭제</button>
+      <div class="delete-confirm-inline" id="delete-confirm-inline" style="display:none">
+        <span>정말 삭제할까요? 되돌릴 수 없습니다.</span>
+        <button type="button" class="danger-btn" onclick="deleteProblem()">예, 삭제</button>
+        <button type="button" class="ghost-btn" onclick="toggleDeleteConfirm()">취소</button>
+      </div>
+      <a class="cancel-link" href="/">취소</a>
+    </div>
+  </form>
+</div>
+
+<script src="/static/common.js"></script>
+<script>
+const _qs = new URLSearchParams(location.search);
+const editId = _qs.get('id');
+const isEdit = editId != null;
+
+let sampleRows = [];
+let hiddenRows = [];
+let allTags = [];
+let selectedTags = [];
+
+(function buildLevelOptions() {
+  const sel = document.getElementById('f-level');
+  const groups = [
+    { label: 'Silver', levels: [6,7,8,9,10] },
+    { label: 'Gold', levels: [11,12,13,14,15] },
+    { label: 'Platinum', levels: [16,17,18,19,20] },
+  ];
+  sel.innerHTML = groups.map(g => `
+    <optgroup label="${g.label}">
+      ${g.levels.map(l => `<option value="${l}">${LV_LABEL[l]}</option>`).join('')}
+    </optgroup>`).join('');
+  sel.value = 11; // 기본값: Gold V
+})();
+
+/* ── 태그 선택(검색 가능한 드롭다운) ─────────────────── */
+async function loadTagOptions() {
+  allTags = await fetch('/api/tags').then(r => r.json());
+  renderTagOptions('');
+}
+
+function renderTagOptions(q) {
+  const filtered = sortTags(allTags).filter(t => (tagKo(t) + t).toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('tag-option-list').innerHTML = filtered.map(t => `
+    <label>
+      <input type="checkbox" ${selectedTags.includes(t) ? 'checked' : ''} onchange="toggleTagOption('${t}')">
+      ${tagKo(t)}
+    </label>`).join('');
+}
+
+function toggleTagOption(tag) {
+  const idx = selectedTags.indexOf(tag);
+  if (idx === -1) selectedTags.push(tag); else selectedTags.splice(idx, 1);
+  updateTagSelectionUi();
+}
+
+function updateTagSelectionUi() {
+  const cnt = document.getElementById('tag-sel-cnt');
+  cnt.textContent = selectedTags.length;
+  cnt.classList.toggle('show', selectedTags.length > 0);
+  const preview = document.getElementById('tag-selected-preview');
+  preview.textContent = selectedTags.length ? sortTags(selectedTags).map(tagKo).join(', ') : '';
+}
+
+function toggleTagDropdown() {
+  document.getElementById('tag-dropdown').classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.tag-select-wrap')) {
+    document.getElementById('tag-dropdown')?.classList.remove('open');
+  }
+});
+
+function rowHtml(listId, i, input, output) {
+  return `
+    <div class="io-row" data-idx="${i}">
+      <div class="io-col">
+        <div class="io-label">입력</div>
+        <textarea class="io-ta" oninput="autoResizeTa(this)">${escHtml(input)}</textarea>
+      </div>
+      <div class="io-col">
+        <div class="io-label">출력</div>
+        <textarea class="io-ta" oninput="autoResizeTa(this)">${escHtml(output)}</textarea>
+      </div>
+      <button type="button" class="io-del-btn" onclick="delRow('${listId}', ${i})">✕</button>
+    </div>`;
+}
+
+function autoResizeTa(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+function addRow(listId, rows, input, output) {
+  rows.push({ input: input || '', output: output || '' });
+  renderRows(listId, rows);
+}
+
+function delRow(listId, idx) {
+  syncRows(listId, listId === 'sample-list' ? sampleRows : hiddenRows);
+  (listId === 'sample-list' ? sampleRows : hiddenRows).splice(idx, 1);
+  renderRows(listId, listId === 'sample-list' ? sampleRows : hiddenRows);
+}
+
+function syncRows(listId, rows) {
+  document.querySelectorAll(`#${listId} .io-row`).forEach((row, i) => {
+    const tas = row.querySelectorAll('.io-ta');
+    rows[i].input = tas[0].value;
+    rows[i].output = tas[1].value;
+  });
+}
+
+function renderRows(listId, rows) {
+  const el = document.getElementById(listId);
+  el.innerHTML = rows.map((r, i) => rowHtml(listId, i, r.input, r.output)).join('');
+  el.querySelectorAll('.io-ta').forEach(autoResizeTa);
+}
+
+async function loadForEdit() {
+  document.getElementById('page-title').textContent = '문제 수정';
+  document.getElementById('submit-btn').textContent = '수정 완료';
+  document.getElementById('delete-btn').style.display = '';
+
+  const res = await fetch(`/api/custom-problems/${editId}/edit`);
+  if (!res.ok) {
+    document.getElementById('form-error').textContent = '문제를 불러올 수 없습니다.';
+    return;
+  }
+  const p = await res.json();
+  document.getElementById('f-title').value = p.title;
+  document.getElementById('f-level').value = p.level;
+  document.getElementById('f-time').value = p.time_limit;
+  document.getElementById('f-memory').value = p.memory_limit;
+  selectedTags = [...p.tags];
+  renderTagOptions('');
+  updateTagSelectionUi();
+  document.getElementById('f-description').value = p.description;
+  document.getElementById('f-input-desc').value = p.input_desc;
+  document.getElementById('f-output-desc').value = p.output_desc;
+
+  sampleRows = p.samples.map(s => ({ input: s.input, output: s.output }));
+  hiddenRows = p.hidden_testcases.map(s => ({ input: s.input, output: s.output }));
+  renderRows('sample-list', sampleRows);
+  renderRows('hidden-list', hiddenRows);
+}
+
+function buildPayload() {
+  syncRows('sample-list', sampleRows);
+  syncRows('hidden-list', hiddenRows);
+  return {
+    title: document.getElementById('f-title').value.trim(),
+    level: Number(document.getElementById('f-level').value),
+    tags: selectedTags,
+    description: document.getElementById('f-description').value,
+    input_desc: document.getElementById('f-input-desc').value,
+    output_desc: document.getElementById('f-output-desc').value,
+    time_limit: document.getElementById('f-time').value.trim() || '2 초',
+    memory_limit: document.getElementById('f-memory').value.trim() || '256 MB',
+    samples: sampleRows.filter(r => r.input.trim() || r.output.trim()),
+    hidden_testcases: hiddenRows.filter(r => r.input.trim() || r.output.trim()),
+  };
+}
+
+async function submitForm() {
+  const errEl = document.getElementById('form-error');
+  errEl.textContent = '';
+  const payload = buildPayload();
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+
+  try {
+    const url = isEdit ? `/api/custom-problems/${editId}` : '/api/custom-problems';
+    const method = isEdit ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '저장 실패');
+    location.href = `/problem?id=${data.id}`;
+  } catch (e) {
+    errEl.textContent = `❌ ${e.message}`;
+    btn.disabled = false;
+  }
+}
+
+function toggleDeleteConfirm() {
+  const btn = document.getElementById('delete-btn');
+  const inline = document.getElementById('delete-confirm-inline');
+  const showing = inline.style.display !== 'none';
+  inline.style.display = showing ? 'none' : 'flex';
+  btn.style.display = showing ? '' : 'none';
+}
+
+async function deleteProblem() {
+  const res = await fetch(`/api/custom-problems/${editId}`, { method: 'DELETE' });
+  if (res.ok) {
+    location.href = '/';
+  } else {
+    const data = await res.json().catch(() => ({}));
+    toggleDeleteConfirm();
+    document.getElementById('form-error').textContent = `❌ ${data.detail || '삭제 실패'}`;
+  }
+}
+
+(async function init() {
+  await loadTagOptions();
+  if (isEdit) {
+    await loadForEdit();
+  } else {
+    addRow('sample-list', sampleRows);
+  }
+})();
+</script>
+</body>
+</html>
