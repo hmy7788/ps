@@ -13,6 +13,7 @@ class ProblemSummary(BaseModel):
     solved: int = 0
     favorite: int = 0
     in_progress: bool = False
+    is_custom: bool = False
 
 
 class Sample(BaseModel):
@@ -27,6 +28,19 @@ class ProblemDetail(ProblemSummary):
     samples: list[Sample]
     average_tries: float | None
     solved_at: str | None = None
+
+
+class CustomProblemCreate(BaseModel):
+    title: str
+    level: int
+    tags: list[str] = []
+    description: str
+    input_desc: str
+    output_desc: str
+    time_limit: str = "2 초"
+    memory_limit: str = "256 MB"
+    samples: list[Sample]
+    hidden_testcases: list[Sample] = []
 
 
 class ProblemListResponse(BaseModel):

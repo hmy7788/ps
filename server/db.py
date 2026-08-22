@@ -22,6 +22,14 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE problems ADD COLUMN solved_at TEXT")
     if "favorite" not in cols:
         conn.execute("ALTER TABLE problems ADD COLUMN favorite INTEGER DEFAULT 0")
+    if "is_custom" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN is_custom INTEGER DEFAULT 0")
+    if "raw_description" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN raw_description TEXT")
+    if "raw_input_desc" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN raw_input_desc TEXT")
+    if "raw_output_desc" not in cols:
+        conn.execute("ALTER TABLE problems ADD COLUMN raw_output_desc TEXT")
     conn.commit()
 
 
@@ -43,6 +51,7 @@ def get_problems(
     solved_only: bool = False,
     favorite_only: bool = False,
     in_progress_only: bool = False,
+    custom_only: bool = False,
     draft_ids: set[int] | None = None,
 ) -> tuple[int, list[dict]]:
     draft_ids = draft_ids or set()
@@ -70,6 +79,9 @@ def get_problems(
     if favorite_only:
         conditions.append("favorite = 1")
 
+    if custom_only:
+        conditions.append("is_custom = 1")
+
     if in_progress_only:
         if not draft_ids:
             return 0, []
@@ -87,7 +99,7 @@ def get_problems(
     rows = conn.execute(
         f"""
         SELECT id, title, level, tags, time_limit, memory_limit,
-               accepted_user_count, solved, favorite
+               accepted_user_count, solved, favorite, is_custom
         FROM problems {where}
         ORDER BY level ASC, id ASC
         LIMIT ? OFFSET ?
@@ -106,12 +118,89 @@ def get_problem_detail(conn: sqlite3.Connection, problem_id: int) -> dict | None
         """
         SELECT id, title, level, tags, description, input_desc, output_desc,
                samples, time_limit, memory_limit, accepted_user_count, average_tries,
-               solved, solved_at, favorite
+               solved, solved_at, favorite, is_custom
         FROM problems WHERE id = ?
         """,
         (problem_id,),
     ).fetchone()
     return _parse_row(row) if row else None
+
+
+def next_custom_id(conn: sqlite3.Connection) -> int:
+    row = conn.execute("SELECT MIN(id) FROM problems WHERE is_custom = 1").fetchone()
+    return (row[0] - 1) if row[0] is not None else -1
+
+
+def create_custom_problem(conn: sqlite3.Connection, data: dict) -> int:
+    new_id = next_custom_id(conn)
+    conn.execute(
+        """
+        INSERT INTO problems
+            (id, title, level, tags, description, input_desc, output_desc,
+             samples, time_limit, memory_limit, is_custom,
+             raw_description, raw_input_desc, raw_output_desc)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+        """,
+        (
+            new_id, data["title"], data["level"],
+            json.dumps(data["tags"], ensure_ascii=False),
+            data["description_html"], data["input_html"], data["output_html"],
+            json.dumps(data["samples"], ensure_ascii=False),
+            data["time_limit"], data["memory_limit"],
+            data["raw_description"], data["raw_input_desc"], data["raw_output_desc"],
+        ),
+    )
+    conn.commit()
+    return new_id
+
+
+def update_custom_problem(conn: sqlite3.Connection, problem_id: int, data: dict) -> bool:
+    row = conn.execute("SELECT is_custom FROM problems WHERE id=?", (problem_id,)).fetchone()
+    if not row or not row["is_custom"]:
+        return False
+    conn.execute(
+        """
+        UPDATE problems SET
+            title=?, level=?, tags=?, description=?, input_desc=?, output_desc=?,
+            samples=?, time_limit=?, memory_limit=?,
+            raw_description=?, raw_input_desc=?, raw_output_desc=?
+        WHERE id=?
+        """,
+        (
+            data["title"], data["level"], json.dumps(data["tags"], ensure_ascii=False),
+            data["description_html"], data["input_html"], data["output_html"],
+            json.dumps(data["samples"], ensure_ascii=False),
+            data["time_limit"], data["memory_limit"],
+            data["raw_description"], data["raw_input_desc"], data["raw_output_desc"],
+            problem_id,
+        ),
+    )
+    conn.commit()
+    return True
+
+
+def delete_custom_problem(conn: sqlite3.Connection, problem_id: int) -> bool:
+    row = conn.execute("SELECT is_custom FROM problems WHERE id=?", (problem_id,)).fetchone()
+    if not row or not row["is_custom"]:
+        return False
+    conn.execute("DELETE FROM problems WHERE id=?", (problem_id,))
+    conn.commit()
+    return True
+
+
+def get_custom_raw(conn: sqlite3.Connection, problem_id: int) -> dict | None:
+    row = conn.execute(
+        """SELECT id, title, level, tags, raw_description, raw_input_desc, raw_output_desc,
+                  samples, time_limit, memory_limit, is_custom
+           FROM problems WHERE id=?""",
+        (problem_id,),
+    ).fetchone()
+    if not row or not row["is_custom"]:
+        return None
+    d = dict(row)
+    d["tags"] = json.loads(d["tags"] or "[]")
+    d["samples"] = json.loads(d["samples"] or "[]")
+    return d
 
 
 def mark_solved(conn: sqlite3.Connection, problem_id: int) -> None:
@@ -169,7 +258,8 @@ def get_all_tags(conn: sqlite3.Connection) -> list[str]:
 
 def get_heatmap_and_streak(conn: sqlite3.Connection) -> dict:
     rows = conn.execute(
-        "SELECT solved_at FROM problems WHERE solved=1 AND solved_at IS NOT NULL"
+        """SELECT solved_at FROM problems
+           WHERE solved=1 AND solved_at IS NOT NULL AND (is_custom IS NULL OR is_custom=0)"""
     ).fetchall()
 
     # 날짜별 카운트 (YYYY-MM-DD)
@@ -253,7 +343,7 @@ def get_user_level(conn: sqlite3.Connection) -> dict:
     """solved.ac 스타일 유저 레벨: 푼 문제 난이도를 경험치로 환산해 누적."""
     rows = conn.execute(
         """SELECT id, level, solved_at FROM problems
-           WHERE solved = 1
+           WHERE solved = 1 AND (is_custom IS NULL OR is_custom=0)
            ORDER BY (solved_at IS NULL), solved_at ASC, id ASC"""
     ).fetchall()
 
@@ -292,17 +382,22 @@ def get_user_level(conn: sqlite3.Connection) -> dict:
 
 
 def get_stats(conn: sqlite3.Connection) -> dict:
-    # 총 풀었던 수
-    total = conn.execute("SELECT COUNT(*) FROM problems WHERE solved=1").fetchone()[0]
+    # 총 풀었던 수 (커스텀 문제는 연습용이라 통계에서 제외)
+    total = conn.execute(
+        "SELECT COUNT(*) FROM problems WHERE solved=1 AND (is_custom IS NULL OR is_custom=0)"
+    ).fetchone()[0]
 
     # 레벨별 분포
     rows = conn.execute(
-        "SELECT level, COUNT(*) as cnt FROM problems WHERE solved=1 GROUP BY level ORDER BY level"
+        """SELECT level, COUNT(*) as cnt FROM problems
+           WHERE solved=1 AND (is_custom IS NULL OR is_custom=0) GROUP BY level ORDER BY level"""
     ).fetchall()
     by_level = {r["level"]: r["cnt"] for r in rows}
 
     # 태그 분포 (풀었던 문제의 태그 집계)
-    solved_rows = conn.execute("SELECT tags FROM problems WHERE solved=1").fetchall()
+    solved_rows = conn.execute(
+        "SELECT tags FROM problems WHERE solved=1 AND (is_custom IS NULL OR is_custom=0)"
+    ).fetchall()
     tag_count: dict[str, int] = {}
     for row in solved_rows:
         for tag in json.loads(row["tags"] or "[]"):
@@ -312,7 +407,7 @@ def get_stats(conn: sqlite3.Connection) -> dict:
     # 최근 풀이 (solved_at 기준 최근 20개)
     recent_rows = conn.execute(
         """SELECT id, title, level, solved_at FROM problems
-           WHERE solved=1 AND solved_at IS NOT NULL
+           WHERE solved=1 AND solved_at IS NOT NULL AND (is_custom IS NULL OR is_custom=0)
            ORDER BY solved_at DESC LIMIT 20"""
     ).fetchall()
     recent = [dict(r) for r in recent_rows]

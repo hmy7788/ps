@@ -5,7 +5,26 @@ import tempfile
 import time
 from pathlib import Path
 
+import bleach
+import markdown
+
 PYTHON = sys.executable
+
+MD_ALLOWED_TAGS = [
+    "p", "br", "hr",
+    "strong", "b", "em", "i", "u", "s", "del", "mark",
+    "code", "pre", "blockquote",
+    "ul", "ol", "li",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "a", "img",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "span", "div",
+]
+MD_ALLOWED_ATTRS = {
+    "a": ["href", "title"],
+    "img": ["src", "alt", "title"],
+    "*": ["class"],
+}
 
 
 def parse_time_limit(raw: str) -> float:
@@ -25,6 +44,16 @@ def parse_time_limit(raw: str) -> float:
 def strip_html(html: str) -> str:
     text = re.sub(r"<[^>]+>", " ", html or "")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def render_custom_markdown(raw: str) -> str:
+    """커스텀 문제 설명/입출력 형식에 마크다운·HTML 문법을 허용하되,
+    이후 innerHTML로 렌더링되므로 bleach로 위험한 태그/속성(script, on* 등)을 걸러낸다."""
+    raw = (raw or "").strip()
+    if not raw:
+        return ""
+    rendered = markdown.markdown(raw, extensions=["fenced_code", "tables", "nl2br", "sane_lists"])
+    return bleach.clean(rendered, tags=MD_ALLOWED_TAGS, attributes=MD_ALLOWED_ATTRS, strip=True)
 
 
 def last_error_line(stderr: str) -> str:
