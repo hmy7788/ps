@@ -28,6 +28,10 @@ all_problems/
   README.md
   {제목}.py (또는 .cpp)          # solution() 함수 형태
 
+커스텀문제/{id}. {제목}/          # 내가 만든 문제(is_custom=1, id<0)의 풀이 저장 위치
+  README.md                      # acmicpc.net 링크 없는 커스텀 전용 템플릿
+  {제목}.py                      # save-solution API가 생성
+
 scripts/                         # 인덱싱 CLI 스크립트 (build_index.py)
 server/                          # FastAPI 백엔드
   main.py                        # 앱 진입점 + 하트비트/워치독(서버 생명주기)
@@ -38,9 +42,10 @@ server/                          # FastAPI 백엔드
     problems.py                  # 문제 검색/조회/필터/통계 API
     run.py                       # 코드 실행 API
     testcases.py                 # AI 테케 생성/채점 API
-    solutions.py                 # 백준 폴더 저장/조회 API
+    solutions.py                 # 백준/커스텀문제 폴더 저장/조회 API
     counterexample.py            # testcase.ac 연동 + AI 반례 탐색 폴백
     drafts.py                    # 임시저장(드래프트) API
+    custom_problems.py           # 커스텀 문제 생성/수정/삭제 API
 frontend/                        # 웹 프론트엔드 (순수 JS + Monaco Editor CDN)
   common.css / common.js         # 공통 스타일/유틸
   index.html / index.css         # 문제 목록 페이지 (검색/필터/즐겨찾기/풀고있는 문제)
@@ -115,7 +120,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ## 웹 앱 아키텍처
 
 - **백엔드**: FastAPI + SQLite (`problems.db`)
-  - `GET /api/problems` — 검색·태그·레벨·즐겨찾기·풀이여부·풀고있는문제(드래프트) 필터 (`q`, `tags`, `levels`, `page`, `size`, `solved`, `favorite`, `in_progress`)
+  - `GET /api/problems` — 검색·태그·레벨·즐겨찾기·풀이여부·풀고있는문제(드래프트)·커스텀문제 필터 (`q`, `tags`, `levels`, `page`, `size`, `solved`, `favorite`, `in_progress`, `custom`)
   - `GET /api/problems/{id}` — 문제 상세
   - `GET /api/tags` — 전체 태그 목록
   - `GET /api/stats` — 총 풀이수/난이도별·태그별 분포/최근 풀이
@@ -129,7 +134,8 @@ ANTHROPIC_API_KEY=sk-ant-...
   - `POST /api/problems/{id}/submit` — 저장된 테케로 채점, 통과/실패/TLE/ERROR 반환
   - `POST /api/problems/{id}/find-counterexample` — testcase.ac 연동, 없으면 AI가 정답코드+입력생성기를 만들어 반례 탐색(폴백)
   - `GET /api/problems/{id}/solutions`, `/last-solution`, `/solutions/{filename}` — 백준 폴더에 저장된 기존 풀이 조회
-  - `POST /api/problems/{id}/save-solution` — 코드를 백준 폴더에 파일로 저장 + DB `solved` 갱신
+  - `POST /api/problems/{id}/save-solution` — 코드를 백준(또는 커스텀문제) 폴더에 파일로 저장 + DB `solved` 갱신
+  - `POST/PUT/DELETE /api/custom-problems`, `GET /api/custom-problems/{id}/edit` — 커스텀 문제(내가 만든 문제) 생성/수정/삭제, 수정 폼 프리필 (`docs/custom-problems.md` 참고). 통계/유저 레벨(EXP)에는 반영되지 않는 연습용 문제.
   - `POST /api/heartbeat`, `POST /api/heartbeat/leaving` — 서버 생명주기(아래 참고), 프론트 `common.js`가 자동 호출
 - **서버 생명주기**: 브라우저 탭이 열려있는 동안만 로컬 서버가 살아있도록 하는 워치독(`server/main.py`)
   - 프론트가 주기적으로 `POST /api/heartbeat` 전송, 탭이 실제로 닫힐 때(`pagehide`)는 `navigator.sendBeacon`으로 `/api/heartbeat/leaving` 전송
@@ -151,4 +157,5 @@ ANTHROPIC_API_KEY=sk-ant-...
 - `problem.json`의 `description`, `input`, `output` 필드는 HTML 문자열이므로 프론트에서 `innerHTML`로 렌더링한다.
 - 코드 실행(`/api/run`)과 AI 반례 폴백의 입력 생성기 실행은 전부 로컬 subprocess 기반 — 별도 샌드박스 없음, 로컬 전용 도구라는 전제.
 - 사용자 코드를 실행하는 `subprocess.run` 호출(`server/routers/run.py`, `server/utils.py::run_one`)은 반드시 `[PYTHON, "-X", "utf8", ...]` + `errors="replace"`를 유지할 것. Windows에서 자식 프로세스의 콘솔 코드페이지(cp949 등)와 부모의 UTF-8 엄격 디코딩이 충돌하면 트레이스백 자체가 통째로 사라지고 500 에러만 남는다 (`docs/subprocess-stderr-encoding-fix.md` 참고).
-- 프로젝트 진행 상황/의사결정/트러블슈팅은 `docs/`에 기능별로 정리한다 (예: `docs/user-level-system.md`).
+- 커스텀 문제(`is_custom=1`, id<0)는 사용자가 직접 입력한 텍스트이므로 설명/입출력 형식은 `render_custom_markdown()`(마크다운 변환 + bleach 태그/속성 허용목록 필터링)으로 정제 후 저장한다 (`innerHTML` 렌더링 대상이라 XSS 방지 필수). 원문(마크다운 소스)은 `raw_description` 등 별도 컬럼에 보관 (수정 폼 프리필용).
+- 프로젝트 진행 상황/의사결정/트러블슈팅은 `docs/`에 기능별로 정리한다 (예: `docs/user-level-system.md`, `docs/custom-problems.md`).
