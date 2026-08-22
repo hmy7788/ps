@@ -1,6 +1,6 @@
 # HANDOFF.md
 
-다른 컴퓨터에서 이어서 개발하기 위한 인수인계 문서. 2026-07-26 기준 최신 상태.
+다른 컴퓨터에서 이어서 개발하기 위한 인수인계 문서. 2026-08-22 기준 최신 상태 (섹션 2-1~2-4는 2026-07-26 세션, 2-5부터는 이후 세션).
 `CLAUDE.md`(프로젝트 규칙)와 `PLAN.md`(원래 설계 문서)는 그대로 유효하며, 이 문서는 "지금까지 뭘 했고 다음에 뭘 할지"에 집중한다.
 
 ---
@@ -13,7 +13,7 @@ cd ps
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-pip install anthropic           # ⚠️ requirements.txt에 빠져있음 (아래 5번 참고)
+pip install anthropic httpx python-dotenv   # ⚠️ 셋 다 requirements.txt에 빠져있음 (아래 5번 참고)
 
 # SQLite 인덱스 생성 (최초 1회, 시간 소요 — all_problems/ 스캔)
 python scripts/build_index.py
@@ -68,19 +68,50 @@ uvicorn server.main:app --reload --port 8000
 
 세 브랜치 모두 origin에 아직 남아있음 (삭제 요청받지 않아서 그대로 둠). 필요 없으면 `git branch -d`/`git push origin --delete`로 정리 가능.
 
+### 2-5. 그레이스풀 서버 셧다운 (브랜치 `fix/graceful-server-shutdown`, merge 완료)
+- **문제**: 조금만 안 써도(브라우저 탭이 백그라운드로 밀려도) localhost 서버가 꺼짐.
+- **원인**: 기존엔 하트비트가 오래 끊기면 워치독이 서버를 죽이는 단순한 타임아웃 방식이었는데, Chrome이 백그라운드 탭의 `setInterval`을 강하게 스로틀링해서 "탭은 열려있는데 하트비트만 안 오는" 상황이 실제 탭 종료로 오인됨.
+- **해결**: "탭이 실제로 사라질 때"(`pagehide`)만 명시적으로 `navigator.sendBeacon('/api/heartbeat/leaving')`으로 신호를 보내고, 서버는 이 신호 후 `_LEAVING_GRACE`(8초) 안에 새 하트비트가 없어야만 종료. leaving 신호 자체가 안 오는 극단적 상황(강제종료 등) 대비 `_SAFETY_TIMEOUT`(30분)을 최후 안전장치로 유지.
+- `server/main.py`, `frontend/common.js` 수정. curl 스크립트 + 실제 Chrome 탭으로 검증 완료.
+
+### 2-6. "풀고 있는 문제만" 필터 (브랜치 `feat/in-progress-filter`, merge 완료)
+- 드래프트 파일(`drafts/{id}.json`)이 남아있는 문제만 목록에서 필터링.
+- `server/routers/drafts.py`에 `list_draft_ids()` 추가, `server/db.py::get_problems()`에 `in_progress_only`/`draft_ids` 파라미터 추가, `ProblemSummary.in_progress` 필드 추가.
+- 프론트: 기존 즐겨찾기 필터와 동일한 패턴으로 버튼/뱃지 추가.
+
+### 2-7. 유저 레벨 시스템 (브랜치 `feat/user-level-system`, merge 완료)
+- solved.ac처럼 푼 문제 난이도를 경험치로 환산해 누적, 1~30 레벨/티어로 표시.
+- `GET /api/stats/level` 신규, `/stats` 페이지에 레벨 배지+진행률 바+레벨업 히스토리 추가.
+- 설계·공식·트러블슈팅은 `docs/user-level-system.md`에 상세 기록. (`/stats.html` 아닌 `/stats`가 정식 라우트인 점, 프론트 수정 후 하드리프레시 필요했던 점 등)
+
+### 2-8. 브랜치 정리 (2026-08-22)
+- 이미 main에 merge된 로컬 브랜치 `feat/in-progress-filter`, `feat/user-level-system`, `fix/graceful-server-shutdown` 삭제 완료.
+- origin의 `feature/ai-counterexample-fallback`, `feature/favorites-drafts`, `feature/testcase-ac-integration`도 전부 main에 이미 병합된 상태(merge-base 확인 결과 unique 커밋 0개) — 원격 삭제는 시도했으나 auto-mode 권한 정책에 막혀 보류 중. 필요하면 사용자가 직접:
+  ```bash
+  git push origin --delete feature/ai-counterexample-fallback feature/favorites-drafts feature/testcase-ac-integration
+  ```
+- **`harness` 브랜치는 의도적으로 정리 대상에서 제외**. `main`과 58커밋 갈라져 있고, 자체적으로 6개의 고유 커밋에 상당한 미병합 작업이 있음 (아래 3번 섹션 참고). 사용자에게 병합 방식(전체 merge / cherry-pick / 보류)을 물었고 **"일단 보류"**로 확정 — 다음에 다시 논의 필요.
+
 ---
 
 ## 3. 현재 브랜치/커밋 상태
 
-- `main`이 유일한 활성 브랜치, origin과 동기화됨.
-- 최근 커밋 흐름(위→최신): 즐겨찾기+드래프트 merge → AI 반례 폴백 merge → BaekjoonHub 자동 커밋 다수(N과 M 시리즈 등) → 다른 컴퓨터에서의 병합 커밋.
+- `main`, `harness` 두 개 로컬 브랜치만 존재. `main`은 origin과 동기화됨.
+- **`harness` 브랜치에 미병합 상태로 존재하는 중요한 작업** (2026-08-22 기준, `main`과 merge-base `abe6fd486`에서 갈라짐, harness 고유 커밋 6개):
+  - `scripts/regression_test.py` — 백준 저장 풀이 전체 회귀 테스트 스크립트 (이전에 "다음에 개발하면 좋을 것"으로 제안했던 것과 동일한 아이디어가 이미 구현되어 있음)
+  - `server/execution.py` — 코드 실행 하네스 코어 (격리 강화)
+  - `docs/decisions/`, `docs/failures/`, `docs/domain/glossary.md` — 의사결정/트러블슈팅/용어집 지식 저장소
+  - `pyproject.toml` + ruff 린터 설정, `tools/`로 런처 스크립트 정리, 제출 탭 결과 카드 UI 고도화
+  - **충돌 위험**: `server/db.py`, `server/routers/problems.py`, `server/main.py` 등 main에서도 활발히 수정된 핵심 파일과 겹쳐서, merge 시 자동 병합이 안 되고 수동 충돌 해결이 필요할 것으로 예상됨. 사용자가 "일단 보류"를 선택해 아직 손대지 않음.
 - **주의**: 이번 세션 중 한 번 다른 컴퓨터(`C:\Users\허민엽\...` 경로)에서 `git push`가 non-fast-forward로 거부된 적 있음 — 원인은 이 컴퓨터에서 먼저 8개 커밋을 push했기 때문. `git pull origin main` 후 재push로 해결됨. **여러 컴퓨터를 오가며 작업할 땐 항상 시작 전에 `git pull`부터 하는 습관 필요.**
 
 ---
 
 ## 4. 아키텍처 요약 (CLAUDE.md 대비 추가 상세)
 
-- **백엔드**: FastAPI + SQLite. 라우터는 `server/routers/`에 `problems.py`(검색/상세/즐겨찾기), `run.py`(코드 실행), `testcases.py`(AI 테케 생성/채점), `counterexample.py`(testcase.ac 연동 + AI 반례 폴백), `drafts.py`(임시저장), `solutions.py`(백준 폴더에 실제 저장) 로 나뉨.
+- **백엔드**: FastAPI + SQLite. 라우터는 `server/routers/`에 `problems.py`(검색/상세/즐겨찾기/통계/유저레벨), `run.py`(코드 실행), `testcases.py`(AI 테케 생성/채점), `counterexample.py`(testcase.ac 연동 + AI 반례 폴백), `drafts.py`(임시저장), `solutions.py`(백준 폴더에 실제 저장) 로 나뉨.
+- **서버 생명주기**: `server/main.py`의 하트비트(`/api/heartbeat`)+워치독 스레드가 브라우저 탭이 열려있는 동안만 서버를 살려둠 (2-5 참고). `frontend/common.js`가 주기적 하트비트 + `pagehide` 시 `sendBeacon`으로 종료 신호 전송.
+- **유저 레벨**: `server/db.py::get_user_level()`이 `solved_at` 순서로 풀이 이력을 시뮬레이션해 경험치·레벨·레벨업 히스토리를 매 요청마다 계산 (별도 저장 테이블 없음). 상세는 `docs/user-level-system.md`.
 - **DB 마이그레이션 패턴**: `server/db.py`의 `_migrate(conn)`이 `get_conn()`을 호출할 때마다 실행됨. 컬럼 존재 여부를 `PRAGMA table_info`로 체크하고 없으면 `ALTER TABLE ... ADD COLUMN`. 새 컬럼 추가할 때 이 패턴 그대로 따라가면 됨.
 - **JSON 파일 캐시 패턴**: `testcases/{id}.json`(AI 생성 테케), `testcases/{id}_ref.json`(AI 반례 폴백용 정답코드+생성기 캐시), `drafts/{id}.json`(임시저장) 전부 동일한 "problem_id 기준 파일 하나" 패턴.
 - **프론트**: 순수 JS + Monaco Editor(CDN). 공통 스타일/유틸은 `frontend/common.css`, `common.js`. 페이지별로 `index.html/css`(목록), `problem.html/css`(풀이), `stats.html/css`(통계) 분리.
@@ -90,11 +121,14 @@ uvicorn server.main:app --reload --port 8000
 
 ## 5. 알아둬야 할 잡음/함정
 
-- **`requirements.txt`에 `anthropic` 패키지가 빠져있음.** AI 테케 생성(`testcases.py`)과 AI 반례 폴백(`counterexample.py`) 둘 다 `import anthropic`을 함수 내부에서 지연 임포트하는데, 정작 패키지 목록에는 없다. 새 컴퓨터에서 `pip install -r requirements.txt`만 하면 이 기능들이 `ModuleNotFoundError`로 죽는다. `pip install anthropic`을 별도로 해줘야 함. (원인이 뭔지는 불명 — `pip freeze`로 requirements.txt를 만들었는데 그 시점에 가상환경에 anthropic이 없었거나, 나중에 추가 설치했는데 requirements.txt를 갱신 안 한 것으로 추정.)
+- **`requirements.txt`에 `anthropic`, `httpx`, `python-dotenv` 패키지가 빠져있음.** AI 테케 생성(`testcases.py`)과 AI 반례 폴백(`counterexample.py`)의 `import anthropic`, testcase.ac 연동의 `import httpx`, `server/main.py`의 `from dotenv import load_dotenv` 전부 패키지 목록엔 없는 걸 쓰는 중. 새 컴퓨터에서 `pip install -r requirements.txt`만 하면 이 기능들이 `ModuleNotFoundError`로 죽는다. (원인 불명 — `pip freeze`로 requirements.txt를 만든 시점 이후 추가 설치된 패키지들이 갱신 안 된 것으로 추정.)
 - **`testcases/` 폴더가 사실 gitignore 안 되어 있음.** `CLAUDE.md`에는 "testcases/는 gitignore 대상"이라고 적혀 있지만 실제 `.gitignore`에는 `testcases/` 룰이 없고, `testcases/2167.json`, `testcases/15649_ref.json` 등이 이미 git에 커밋되어 있다. CLAUDE.md 작성 당시 의도와 실제 상태가 어긋난 상태. 이번 세션에서 고치지는 않았음 — 만약 의도대로 로컬 전용으로 만들고 싶으면 `.gitignore`에 `testcases/` 추가하고 이미 커밋된 파일들은 `git rm --cached`로 내려야 함 (사용자 확인 필요한 작업이라 보류함).
 - **`e.currentTarget`은 `await` 이후 `null`이 된다.** `index.html`의 `toggleFavorite(e, id)`에서 겪은 실제 버그. 이벤트 디스패치가 끝나면 브라우저가 `currentTarget`을 비운다. `async` 이벤트 핸들러에서 `e.currentTarget`을 쓸 거면 **`await` 하기 전에, 함수 맨 위에서 동기적으로** 로컬 변수에 캡처해야 한다.
 - **git `reset --soft`는 브랜치에 고유 커밋이 없을 때 위험할 수 있음.** 예전 세션에서 `feature/*` 브랜치가 `main`과 트리가 다른 상태에서 `git reset --soft main`을 했더니 수백 개 파일이 스푸리어스하게 staged deletion으로 표시된 적 있음. 브랜치에 합칠 고유 커밋이 없으면 `reset`/`rebase` 대신 그냥 `git merge`를 쓰는 게 안전.
 - **AI 코드 실행 관련 보안 경계**: `POST /api/run`과 AI 반례 폴백의 입력 생성기 실행은 전부 로컬 subprocess 기반이고 별도 샌드박스가 없다 (`CLAUDE.md`에도 명시됨). 로컬 전용 도구라는 전제.
+- **`/stats` 페이지 경로는 `/stats.html`이 아니라 `/stats`.** `frontend/stats.html`은 정적 파일로 직접 서빙되는 게 아니라 `server/main.py`의 `@app.get("/stats")` 핸들러가 `FileResponse`로 반환하는 것. `/stats.html`로 접속하면 404.
+- **프론트 CSS/JS 수정 후 브라우저에 반영이 안 되면 십중팔구 캐시 문제.** 서버 재시작만으로는 부족하고 `Ctrl+Shift+R` 하드 리프레시가 필요했던 경우가 반복됨 (즐겨찾기 기능, 유저 레벨 시스템 검증 때 둘 다 겪음).
+- **`git push origin --delete <branch>`는 auto-mode 권한 정책에 막힐 수 있음.** 원격 브랜치 삭제는 "허용됨" 목록에 없어서 사용자가 직접 실행해야 하는 경우가 있었음 (2-8 참고).
 
 ---
 
@@ -108,6 +142,9 @@ uvicorn server.main:app --reload --port 8000
 ---
 
 ## 7. 진행 중이거나 다음에 이어갈 작업
+
+### 7-0. `harness` 브랜치 반영 방식 결정 (보류 중, 최우선 후보)
+2-8/섹션 3 참고. `scripts/regression_test.py`, `server/execution.py`, `docs/decisions|failures|domain/` 등 이미 완성된 작업이 `harness`에 잠들어 있음. `main`과 58커밋 갈라졌고 핵심 서버 파일이 겹쳐서 merge 시 수동 충돌 해결이 필요할 전망. 사용자가 "일단 보류"를 선택했으니, 다시 논의할 때 세 가지 선택지(전체 merge / 필요한 파일만 cherry-pick / 계속 보류) 중 고르는 것부터 시작.
 
 ### 7-1. CSS 정리 (보고만 하고 아직 미착수, 사용자 확인 대기 중)
 "css적으로 좀 고칠부분은?" 질문에 대한 답변으로 아래 항목들을 리포트했음. 아직 어떤 것부터 할지 확답은 못 받은 상태:
@@ -126,8 +163,9 @@ uvicorn server.main:app --reload --port 8000
 ("UI 전체적으로 검토해주고 더 디벨롭할 부분 보고해"에 대한 답변 중 아직 미착수)
 - 문제 목록 정렬 옵션 (난이도순/번호순 등)
 - 즐겨찾기 우선 정렬 / 즐겨찾기 개수 요약 표시
-- 목록 카드에 "임시저장 존재함" 표시
+- ~~목록 카드에 "임시저장 존재함" 표시~~ → 2-6에서 "풀고 있는 문제만" 필터 + 뱃지로 구현 완료
 - "⏱ 성능 테스트" 기능 (TLE 전용 스트레스 테스트) — 아이디어 단계, 구체적 설계는 아직 없음
+- `index.html` 헤더에 유저 레벨 배지 상시 노출 (`docs/user-level-system.md`의 "향후 확장 아이디어"에도 기록됨)
 
-### 7-3. `PLAN.md`의 원래 설계 (별개 트랙, 진행 여부 불명확)
-`PLAN.md`에 있는 `selected_problems/` 기반 대규모 재구성 플랜(레벨 6~20 전체 선별, `scripts/select_problems.py` 등)은 이번 세션에서 손대지 않았음. 현재 웹앱은 그 설계와 다르게 `all_problems/`를 SQLite 인덱스로 직접 서빙하는 방식으로 이미 굴러가고 있어서, `PLAN.md`가 최신 아키텍처를 반영 못 하고 있을 가능성이 있음 — 다음에 정리가 필요할 수도 있는 문서.
+### 7-3. `PLAN.md` 문서 드리프트 — 2026-08-22에 해소됨
+과거엔 `PLAN.md`가 API 목록/디렉토리 구조 등에서 실제 구현과 어긋나 있었음. 2026-08-22 세션에서 `CLAUDE.md`/`PLAN.md`/이 문서를 전부 현재 구현 상태 기준으로 갱신 완료 (목표 기능 8~13번, API 목록, 디렉토리 구조, 미결사항 표 등). 앞으로 새 기능을 merge할 때마다 세 문서를 같이 갱신하는 습관이 필요.

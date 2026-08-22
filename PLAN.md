@@ -18,6 +18,12 @@
 5. **문제 + 코드 에디터 스플릿 뷰** — Programmers 스타일 ✅
 6. **샘플 테케 실행** — 정답/오답 확인 ✅
 7. **AI 채점 테케 생성/제출** — Claude API로 테케 생성, 채점 ✅
+8. **AI 반례 탐색 폴백** — testcase.ac에 등록 안 된 문제는 AI가 정답코드+입력생성기 생성 후 스트레스 테스트 ✅
+9. **풀이 완료 시 백준 폴더 자동 저장** — `solved` DB 갱신 + 파일 생성 ✅
+10. **즐겨찾기 / 임시저장(드래프트)** — 문제 즐겨찾기 토글, 미완성 코드 자동 저장·복원 ✅
+11. **통계 페이지** — 풀이 히트맵/연속 스트릭, 난이도·태그 분포, solved.ac 스타일 유저 레벨(경험치·레벨업 히스토리) ✅
+12. **풀고 있는 문제 필터링** — 드래프트가 남아있는 문제만 보기 ✅
+13. **로컬 서버 자동 종료(그레이스풀 셧다운)** — 브라우저 탭 종료 감지 시 서버도 함께 종료 ✅
 
 ---
 
@@ -72,24 +78,33 @@ ps/
 ├── scripts/
 │   └── build_index.py              # SQLite 인덱스 생성 (최초 1회) ✅
 ├── server/
-│   ├── main.py                     # FastAPI 앱 진입점 ✅
-│   ├── db.py                       # SQLite 연결/쿼리 ✅
+│   ├── main.py                     # FastAPI 앱 진입점 + 하트비트/워치독 ✅
+│   ├── db.py                       # SQLite 연결/쿼리/마이그레이션/유저 레벨 계산 ✅
 │   ├── models.py                   # Pydantic 모델 ✅
-│   ├── utils.py                    # 시간제한 파싱 등 ✅
+│   ├── utils.py                    # 시간제한 파싱, run_one, strip_html ✅
 │   └── routers/
-│       ├── problems.py             # 검색/필터 API ✅
+│       ├── problems.py             # 검색/필터/통계 API ✅
 │       ├── run.py                  # 코드 실행 API ✅
-│       └── testcases.py            # AI 테케 생성/채점 API ✅
+│       ├── testcases.py            # AI 테케 생성/채점 API ✅
+│       ├── solutions.py            # 백준 폴더 저장/조회 API ✅
+│       ├── counterexample.py       # testcase.ac 연동 + AI 반례 폴백 ✅
+│       └── drafts.py               # 임시저장(드래프트) API ✅
 ├── frontend/
-│   ├── common.css, common.js       # 공통 (태그 한글화, 레벨 배지 등) ✅
-│   ├── index.html, index.css       # 문제 목록 페이지 ✅
-│   └── problem.html, problem.css   # 문제 풀이 페이지 ✅
-├── testcases/                      # AI 생성 테케 저장 (gitignore)
-│   └── {id}.json
+│   ├── common.css, common.js       # 공통 (태그 한글화, 레벨 배지, 하트비트 전송 등) ✅
+│   ├── index.html, index.css       # 문제 목록 페이지 (검색/필터/즐겨찾기/드래프트) ✅
+│   ├── problem.html, problem.css   # 문제 풀이 페이지 (실행/제출 탭, 반례 탐색) ✅
+│   └── stats.html, stats.css       # 통계 페이지 (히트맵/레벨/분포) ✅
+├── docs/                           # 기능별 설계/구현/트러블슈팅 기록 ✅
+├── testcases/                      # AI 생성 테케 + AI 반례용 정답코드 캐시 (실제로는 완전히 gitignore 안 됨, 주의사항 참고)
+│   ├── {id}.json
+│   └── {id}_ref.json
+├── drafts/                         # 문제별 임시저장 코드 (gitignore)
+├── reports/                        # 회귀 테스트 등 애드혹 리포트 (gitignore)
 ├── problems.db                     # SQLite 인덱스 (gitignore)
 ├── .env                            # ANTHROPIC_API_KEY (gitignore)
 ├── PLAN.md
-└── CLAUDE.md
+├── CLAUDE.md
+└── HANDOFF.md                      # 세션 간 인수인계 문서
 ```
 
 ---
@@ -98,13 +113,22 @@ ps/
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| GET | `/api/problems` | 목록 조회 (검색·필터 쿼리 파라미터) |
+| GET | `/api/problems` | 목록 조회 (검색·태그·레벨·즐겨찾기·풀이여부·풀고있는문제 필터) |
 | GET | `/api/problems/{id}` | 문제 상세 |
 | GET | `/api/tags` | 전체 태그 목록 |
+| GET | `/api/stats` | 총 풀이수/난이도별·태그별 분포/최근 풀이 |
+| GET | `/api/stats/heatmap` | 풀이 히트맵 + 연속 스트릭 |
+| GET | `/api/stats/level` | 유저 레벨/경험치/레벨업 히스토리 (`docs/user-level-system.md`) |
+| POST | `/api/problems/{id}/favorite` | 즐겨찾기 토글 |
+| GET/POST/DELETE | `/api/problems/{id}/draft` | 임시저장(드래프트) 조회/저장/삭제 |
 | POST | `/api/run` | 코드 실행 (subprocess) |
 | GET | `/api/problems/{id}/testcases` | 저장된 AI 테케 조회 |
 | POST | `/api/problems/{id}/generate-testcases` | Claude API로 테케 생성 |
 | POST | `/api/problems/{id}/submit` | AI 테케로 채점 |
+| POST | `/api/problems/{id}/find-counterexample` | testcase.ac 연동, 없으면 AI 반례 탐색 폴백 |
+| GET | `/api/problems/{id}/solutions`, `/last-solution`, `/solutions/{filename}` | 백준 폴더에 저장된 풀이 조회 |
+| POST | `/api/problems/{id}/save-solution` | 코드를 백준 폴더에 저장 + `solved` 갱신 |
+| POST | `/api/heartbeat`, `/api/heartbeat/leaving` | 서버 생명주기 신호 (브라우저 탭 종료 시 서버 자동 종료) |
 
 ---
 
@@ -144,10 +168,13 @@ uvicorn server.main:app --reload --port 8000
 | 항목 | 상태 | 비고 |
 |------|------|------|
 | C++ 코드 실행 지원 | 미구현 | 현재 Python만 |
-| 풀이 저장/불러오기 | 미구현 | localStorage 또는 파일 저장 |
+| 풀이 저장/불러오기 | 구현 완료 | DB `solved` + 백준 폴더 파일 저장(`save-solution`), 임시저장은 `drafts/`로 별도 |
 | 코드 실행 보안 | subprocess + timeout | 샌드박스 없음 (로컬 전용) |
 | 태그 필터 정렬 | 구현 완료 | 코딩테스트 중요도 순 |
-| 풀이 완료 시 백준 폴더 자동 저장 | 미구현 | 아래 참고 |
+| 풀이 완료 시 백준 폴더 자동 저장 | 구현 완료 | 아래 참고 |
+| 즐겨찾기 / 드래프트 / 통계 / 유저 레벨 / 그레이스풀 셧다운 | 구현 완료 | `HANDOFF.md`에 세션별 구현 기록 |
+| 자동화 테스트(`tests/`) | 미구현 | 아직 빈 폴더, 회귀 검증은 `harness` 브랜치의 `scripts/regression_test.py`가 main에 미병합 상태로 존재 |
+| `testcases/` 완전한 gitignore화 | 보류 | 이미 커밋된 파일 정리 필요, 사용자 확인 필요해 보류 중 |
 
 ---
 
