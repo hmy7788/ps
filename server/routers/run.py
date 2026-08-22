@@ -30,11 +30,12 @@ def run_code(req: RunRequest):
         start = time.perf_counter()
         try:
             result = subprocess.run(
-                [PYTHON, str(tmp_path)],
+                [PYTHON, "-X", "utf8", str(tmp_path)],
                 input=req.stdin,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
+                errors="replace",
                 timeout=python_limit,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000

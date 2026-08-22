@@ -37,11 +37,12 @@ def run_one(code: str, stdin: str, limit_sec: float) -> dict:
         t0 = time.perf_counter()
         try:
             proc = subprocess.run(
-                [PYTHON, str(tmp)],
+                [PYTHON, "-X", "utf8", str(tmp)],
                 input=stdin,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
+                errors="replace",
                 timeout=limit_sec,
             )
             elapsed = round((time.perf_counter() - t0) * 1000, 2)

@@ -150,4 +150,5 @@ ANTHROPIC_API_KEY=sk-ant-...
 - `problems.db`, `drafts/`, `reports/`, `testcases/`는 gitignore 대상 (빌드 산출물/로컬 캐시).
 - `problem.json`의 `description`, `input`, `output` 필드는 HTML 문자열이므로 프론트에서 `innerHTML`로 렌더링한다.
 - 코드 실행(`/api/run`)과 AI 반례 폴백의 입력 생성기 실행은 전부 로컬 subprocess 기반 — 별도 샌드박스 없음, 로컬 전용 도구라는 전제.
+- 사용자 코드를 실행하는 `subprocess.run` 호출(`server/routers/run.py`, `server/utils.py::run_one`)은 반드시 `[PYTHON, "-X", "utf8", ...]` + `errors="replace"`를 유지할 것. Windows에서 자식 프로세스의 콘솔 코드페이지(cp949 등)와 부모의 UTF-8 엄격 디코딩이 충돌하면 트레이스백 자체가 통째로 사라지고 500 에러만 남는다 (`docs/subprocess-stderr-encoding-fix.md` 참고).
 - 프로젝트 진행 상황/의사결정/트러블슈팅은 `docs/`에 기능별로 정리한다 (예: `docs/user-level-system.md`).

@@ -101,6 +101,12 @@ uvicorn server.main:app --reload --port 8000
 
 Chrome으로 실제 렌더링 확인 완료 (하드리프레시 후 정상 표시).
 
+### 2-10. 코드 실행 에러 메시지가 "서버 오류"로 뭉개지던 버그 수정 (브랜치 `fix/subprocess-stderr-encoding`)
+- **증상**: `/api/run`에서 `IndexError` 등 진짜 런타임 에러가 나면 실제 메시지 대신 `서버 오류: Unexpected token 'I', "Internal S"... is not valid JSON`만 뜸.
+- **원인**: 자식 파이썬 프로세스가 Windows 콘솔 기본 코드페이지(cp949)로 stderr를 인코딩하는데, 부모(서버)는 UTF-8로 엄격 디코딩. 트레이스백에 항상 찍히는 임시파일 경로에 이 컴퓨터의 한글 계정명이 섞여있어서 디코딩이 실패 → `stderr`가 `None`이 되어 Pydantic 검증 실패 → 500 에러 → 프론트가 그걸 JSON으로 파싱하려다 실패한 에러가 대신 뜸.
+- **해결**: `server/routers/run.py`, `server/utils.py`의 `subprocess.run`에 `-X utf8`(자식 프로세스 UTF-8 강제) + `errors="replace"`(디코딩 실패해도 안 죽게) 추가. `harness` 브랜치가 똑같은 버그를 먼저 겪고 `docs/failures/002-...md`에 남겨둔 해결책을 그대로 적용.
+- 상세: `docs/subprocess-stderr-encoding-fix.md`. curl 재현 + 실제 Chrome에서 `/problem?id=1074`로 검증 완료.
+
 ---
 
 ## 3. 현재 브랜치/커밋 상태
