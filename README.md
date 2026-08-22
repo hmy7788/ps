@@ -52,6 +52,6 @@ CLI가 익숙하지 않다면 아래 스크립트들을 순서대로 실행하�
 | 문서 | 내용 |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | 프로젝트 규칙, 디렉토리 구조, API 목록, 아키텍처 |
-| [`PLAN.md`](PLAN.md) | 원래 설계 문서, 목표 기능, 미결 사항 |
-| [`HANDOFF.md`](HANDOFF.md) | 세션별 작업 기록, 알려진 잡음/함정, 다음에 할 일 |
+| [`docs/PLAN.md`](docs/PLAN.md) | 원래 설계 문서, 목표 기능, 미결 사항 |
+| [`docs/HANDOFF.md`](docs/HANDOFF.md) | 세션별 작업 기록, 알려진 잡음/함정, 다음에 할 일 |
 | [`docs/`](docs/) | 기능별 상세 설계·구현·트러블슈팅 (예: [`docs/user-level-system.md`](docs/user-level-system.md)) |

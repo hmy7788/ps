@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 33,000+개의 백준 문제가 `all_problems/problems/{id}/problem.json` 형태로 아카이빙되어 있으며,  
 이 중 레벨 6~20(Silver~Platinum)을 선별해 Programmers 스타일의 웹 UI로 제공한다.
 
-자세한 설계는 `PLAN.md` 참고.
+자세한 설계는 `docs/PLAN.md` 참고. 세션별 작업 기록은 `docs/HANDOFF.md`.
 
 ---
 

@@ -94,7 +94,10 @@ ps/
 │   ├── index.html, index.css       # 문제 목록 페이지 (검색/필터/즐겨찾기/드래프트) ✅
 │   ├── problem.html, problem.css   # 문제 풀이 페이지 (실행/제출 탭, 반례 탐색) ✅
 │   └── stats.html, stats.css       # 통계 페이지 (히트맵/레벨/분포) ✅
-├── docs/                           # 기능별 설계/구현/트러블슈팅 기록 ✅
+├── docs/                           # 프로젝트 문서
+│   ├── PLAN.md                     # 이 문서 (원래 설계)
+│   ├── HANDOFF.md                  # 세션 간 인수인계 문서
+│   └── ...                         # 기능별 설계/구현/트러블슈팅 기록 ✅
 ├── testcases/                      # AI 생성 테케 + AI 반례용 정답코드 캐시 (gitignore)
 │   ├── {id}.json
 │   └── {id}_ref.json
@@ -102,9 +105,7 @@ ps/
 ├── reports/                        # 회귀 테스트 등 애드혹 리포트 (gitignore)
 ├── problems.db                     # SQLite 인덱스 (gitignore)
 ├── .env                            # ANTHROPIC_API_KEY (gitignore)
-├── PLAN.md
-├── CLAUDE.md
-└── HANDOFF.md                      # 세션 간 인수인계 문서
+└── CLAUDE.md
 ```
 
 ---
