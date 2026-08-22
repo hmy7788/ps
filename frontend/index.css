@@ -29,6 +29,26 @@ header { position: sticky; top: 0; z-index: 10; }
 }
 .stats-link:hover { color: var(--accent); border-color: var(--accent); }
 
+/* 유저 레벨 미니 배지 */
+.level-badge-mini {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+}
+.level-badge-mini:empty { display: none; }
+.level-badge-mini.bronze   { color: var(--bronze); }
+.level-badge-mini.silver   { color: var(--silver); }
+.level-badge-mini.gold     { color: var(--gold); }
+.level-badge-mini.platinum { color: var(--platinum); }
+.level-badge-mini.diamond  { color: var(--diamond); }
+.level-badge-mini.ruby     { color: var(--ruby); }
+
 /* 풀었던 문제만 필터 */
 .solved-filter-btn.active {
   color: var(--ok);

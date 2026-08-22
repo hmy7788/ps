@@ -1,5 +1,0 @@
-{
-  "problem_id": 15649,
-  "reference_code": "\nimport sys\ninput = sys.stdin.readline\n\nN, M = map(int, input().split())\n\nresult = []\n\ndef backtrack(current, visited):\n    if len(current) == M:\n        print(' '.join(map(str, current)))\n        return\n    for i in range(1, N + 1):\n        if not visited[i]:\n            visited[i] = True\n            current.append(i)\n            backtrack(current, visited)\n            current.pop()\n            visited[i] = False\n\nvisited = [False] * (N + 1)\nbacktrack([], visited)\n",
-  "generator_code": "\nimport random\n\ndef generate(rng: random.Random, kind: str) -> str:\n    if kind == \"edge\":\n        # 최솟값(N=M=1) 또는 최댓값(N=M=8) 중 하나를 랜덤 선택\n        if rng.random() < 0.5:\n            N, M = 1, 1\n        else:\n            N, M = 8, 8\n    elif kind == \"stress\":\n        # 제약조건 최댓값 근처: N은 6~8, M은 N에 가까운 값\n        N = rng.randint(6, 8)\n        M = rng.randint(max(1, N - 1), N)\n    else:  # general\n        N = rng.randint(1, 8)\n        M = rng.randint(1, N)\n    \n    return f\"{N} {M}\\n\"\n"
-}

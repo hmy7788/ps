@@ -12,8 +12,7 @@ git clone https://github.com/hmy7788/ps.git
 cd ps
 python -m venv .venv
 .venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-pip install anthropic httpx python-dotenv   # ⚠️ 셋 다 requirements.txt에 빠져있음 (아래 5번 참고)
+pip install -r requirements.txt   # anthropic/httpx/python-dotenv 전부 포함됨 (2026-08-22에 수정)
 
 # SQLite 인덱스 생성 (최초 1회, 시간 소요 — all_problems/ 스캔)
 python scripts/build_index.py
@@ -27,7 +26,7 @@ uvicorn server.main:app --reload --port 8000
 
 `problems.db`, `testcases/*.json`(AI 생성분), `drafts/`는 전부 gitignore 대상이라 새 컴퓨터에는 없다.
 - `problems.db`는 `build_index.py`로 재생성.
-- `testcases/`, `drafts/`는 로컬 캐시라 없어도 기능은 동작하고, 쓰면서 다시 쌓인다 (단, `testcases/2167.json`, `testcases/15649_ref.json`처럼 실수로 커밋된 것들은 git에 남아있음 — 8번 참고).
+- `testcases/`, `drafts/`는 로컬 캐시라 없어도 기능은 동작하고, 쓰면서 다시 쌓인다.
 
 ---
 
@@ -92,6 +91,14 @@ uvicorn server.main:app --reload --port 8000
   ```
 - **`harness` 브랜치는 의도적으로 정리 대상에서 제외**. `main`과 58커밋 갈라져 있고, 자체적으로 6개의 고유 커밋에 상당한 미병합 작업이 있음 (아래 3번 섹션 참고). 사용자에게 병합 방식(전체 merge / cherry-pick / 보류)을 물었고 **"일단 보류"**로 확정 — 다음에 다시 논의 필요.
 
+### 2-9. 하우스키핑 3종 (브랜치 `chore/housekeeping-fixes`)
+문서에 계속 "알려진 이슈"로만 적혀 있던 것들을 실제로 고침:
+1. **`requirements.txt` 누락 패키지 추가** — `anthropic==0.120.0`, `httpx==0.28.1`, `python-dotenv==1.2.2` 추가 (현재 venv에 설치된 버전 그대로 고정). 이 파일은 UTF-16(BOM) 인코딩인데, pip이 BOM을 보고 자동으로 인코딩을 감지해서 읽기 때문에 문제없이 동작함 — 굳이 UTF-8로 바꿀 필요는 없어서 그대로 유지.
+2. **`testcases/` gitignore 정리** — `.gitignore`에 `testcases/` 추가, 이미 커밋돼 있던 7개 파일(`testcases/1010.json` 등)은 `git rm --cached`로 추적만 해제 (디스크의 실제 파일은 그대로 남아있음, 삭제 아님).
+3. **`index.html` 헤더에 유저 레벨 미니 배지 추가** — `GET /api/stats/level`을 새로 fetch해서 "Lv.11 Gold V" 같은 pill을 로고 옆에 표시. 기존 `.stats-link`와 같은 톤의 스타일, 티어별 색상은 `stats.html`의 `.level-badge`와 동일한 CSS 변수(`--gold` 등) 재사용.
+
+Chrome으로 실제 렌더링 확인 완료 (하드리프레시 후 정상 표시).
+
 ---
 
 ## 3. 현재 브랜치/커밋 상태
@@ -121,8 +128,8 @@ uvicorn server.main:app --reload --port 8000
 
 ## 5. 알아둬야 할 잡음/함정
 
-- **`requirements.txt`에 `anthropic`, `httpx`, `python-dotenv` 패키지가 빠져있음.** AI 테케 생성(`testcases.py`)과 AI 반례 폴백(`counterexample.py`)의 `import anthropic`, testcase.ac 연동의 `import httpx`, `server/main.py`의 `from dotenv import load_dotenv` 전부 패키지 목록엔 없는 걸 쓰는 중. 새 컴퓨터에서 `pip install -r requirements.txt`만 하면 이 기능들이 `ModuleNotFoundError`로 죽는다. (원인 불명 — `pip freeze`로 requirements.txt를 만든 시점 이후 추가 설치된 패키지들이 갱신 안 된 것으로 추정.)
-- **`testcases/` 폴더가 사실 gitignore 안 되어 있음.** `CLAUDE.md`에는 "testcases/는 gitignore 대상"이라고 적혀 있지만 실제 `.gitignore`에는 `testcases/` 룰이 없고, `testcases/2167.json`, `testcases/15649_ref.json` 등이 이미 git에 커밋되어 있다. CLAUDE.md 작성 당시 의도와 실제 상태가 어긋난 상태. 이번 세션에서 고치지는 않았음 — 만약 의도대로 로컬 전용으로 만들고 싶으면 `.gitignore`에 `testcases/` 추가하고 이미 커밋된 파일들은 `git rm --cached`로 내려야 함 (사용자 확인 필요한 작업이라 보류함).
+- ~~`requirements.txt`에 `anthropic`/`httpx`/`python-dotenv` 패키지가 빠져있음~~ → 2-9에서 수정 완료 (2026-08-22).
+- ~~`testcases/` 폴더가 사실 gitignore 안 되어 있음~~ → 2-9에서 수정 완료 (2026-08-22).
 - **`e.currentTarget`은 `await` 이후 `null`이 된다.** `index.html`의 `toggleFavorite(e, id)`에서 겪은 실제 버그. 이벤트 디스패치가 끝나면 브라우저가 `currentTarget`을 비운다. `async` 이벤트 핸들러에서 `e.currentTarget`을 쓸 거면 **`await` 하기 전에, 함수 맨 위에서 동기적으로** 로컬 변수에 캡처해야 한다.
 - **git `reset --soft`는 브랜치에 고유 커밋이 없을 때 위험할 수 있음.** 예전 세션에서 `feature/*` 브랜치가 `main`과 트리가 다른 상태에서 `git reset --soft main`을 했더니 수백 개 파일이 스푸리어스하게 staged deletion으로 표시된 적 있음. 브랜치에 합칠 고유 커밋이 없으면 `reset`/`rebase` 대신 그냥 `git merge`를 쓰는 게 안전.
 - **AI 코드 실행 관련 보안 경계**: `POST /api/run`과 AI 반례 폴백의 입력 생성기 실행은 전부 로컬 subprocess 기반이고 별도 샌드박스가 없다 (`CLAUDE.md`에도 명시됨). 로컬 전용 도구라는 전제.
@@ -165,7 +172,7 @@ uvicorn server.main:app --reload --port 8000
 - 즐겨찾기 우선 정렬 / 즐겨찾기 개수 요약 표시
 - ~~목록 카드에 "임시저장 존재함" 표시~~ → 2-6에서 "풀고 있는 문제만" 필터 + 뱃지로 구현 완료
 - "⏱ 성능 테스트" 기능 (TLE 전용 스트레스 테스트) — 아이디어 단계, 구체적 설계는 아직 없음
-- `index.html` 헤더에 유저 레벨 배지 상시 노출 (`docs/user-level-system.md`의 "향후 확장 아이디어"에도 기록됨)
+- ~~`index.html` 헤더에 유저 레벨 배지 상시 노출~~ → 2-9에서 구현 완료
 
 ### 7-3. `PLAN.md` 문서 드리프트 — 2026-08-22에 해소됨
 과거엔 `PLAN.md`가 API 목록/디렉토리 구조 등에서 실제 구현과 어긋나 있었음. 2026-08-22 세션에서 `CLAUDE.md`/`PLAN.md`/이 문서를 전부 현재 구현 상태 기준으로 갱신 완료 (목표 기능 8~13번, API 목록, 디렉토리 구조, 미결사항 표 등). 앞으로 새 기능을 merge할 때마다 세 문서를 같이 갱신하는 습관이 필요.

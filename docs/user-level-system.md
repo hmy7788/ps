@@ -83,6 +83,6 @@ GET /api/stats/level
 
 ## 향후 확장 아이디어 (미구현)
 
-- `index.html` 헤더에 작은 레벨 배지 상시 표시
+- ~~`index.html` 헤더에 작은 레벨 배지 상시 표시~~ → 2026-08-22, `docs/housekeeping-fixes.md` 참고해 구현 완료
 - 레벨업 시 토스트/애니메이션 연출
 - EXP 공식 상수를 설정 파일로 분리해 사용자가 직접 튜닝 가능하게

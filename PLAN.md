@@ -95,7 +95,7 @@ ps/
 │   ├── problem.html, problem.css   # 문제 풀이 페이지 (실행/제출 탭, 반례 탐색) ✅
 │   └── stats.html, stats.css       # 통계 페이지 (히트맵/레벨/분포) ✅
 ├── docs/                           # 기능별 설계/구현/트러블슈팅 기록 ✅
-├── testcases/                      # AI 생성 테케 + AI 반례용 정답코드 캐시 (실제로는 완전히 gitignore 안 됨, 주의사항 참고)
+├── testcases/                      # AI 생성 테케 + AI 반례용 정답코드 캐시 (gitignore)
 │   ├── {id}.json
 │   └── {id}_ref.json
 ├── drafts/                         # 문제별 임시저장 코드 (gitignore)
@@ -174,7 +174,8 @@ uvicorn server.main:app --reload --port 8000
 | 풀이 완료 시 백준 폴더 자동 저장 | 구현 완료 | 아래 참고 |
 | 즐겨찾기 / 드래프트 / 통계 / 유저 레벨 / 그레이스풀 셧다운 | 구현 완료 | `HANDOFF.md`에 세션별 구현 기록 |
 | 자동화 테스트(`tests/`) | 미구현 | 아직 빈 폴더, 회귀 검증은 `harness` 브랜치의 `scripts/regression_test.py`가 main에 미병합 상태로 존재 |
-| `testcases/` 완전한 gitignore화 | 보류 | 이미 커밋된 파일 정리 필요, 사용자 확인 필요해 보류 중 |
+| `testcases/` 완전한 gitignore화 | 구현 완료 | `.gitignore`에 `testcases/` 추가 + 기존 커밋 파일 `git rm --cached` (2026-08-22) |
+| `requirements.txt` 누락 패키지 | 구현 완료 | `anthropic`/`httpx`/`python-dotenv` 추가 (2026-08-22) |
 
 ---
 

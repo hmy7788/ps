@@ -11,6 +11,7 @@
 
 <header>
   <a class="logo" href="/">PS Platform</a>
+  <a class="level-badge-mini" id="level-badge-mini" href="/stats"></a>
   <a class="stats-link" href="/stats">📊 통계</a>
   <input class="search-input" id="search-input" type="text" placeholder="🔍  문제 번호 또는 제목 검색...">
 
@@ -70,6 +71,17 @@ const st = { q:'', tags:[], levels:[], page:1, size:24, total:0, solvedOnly:fals
 })();
 
 let allTags = [];
+
+async function loadLevelBadge() {
+  try {
+    const lv = await fetch('/api/stats/level').then(r => r.json());
+    const el = document.getElementById('level-badge-mini');
+    el.textContent = `Lv.${lv.level} ${lv.label}`;
+    el.className = `level-badge-mini ${lv.class}`;
+  } catch (e) {
+    // 배지는 부가 기능이라 실패해도 조용히 무시
+  }
+}
 
 async function loadTags() {
   allTags = await fetch('/api/tags').then(r => r.json());
@@ -277,6 +289,7 @@ document.getElementById('search-input').addEventListener('input', e => {
 
 loadTags();
 loadProblems();
+loadLevelBadge();
 </script>
 </body>
 </html>

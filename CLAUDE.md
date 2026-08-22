@@ -47,10 +47,9 @@ frontend/                        # 웹 프론트엔드 (순수 JS + Monaco Edito
   problem.html / problem.css     # 문제 풀이 페이지 (실행/제출 탭)
   stats.html / stats.css         # 통계 페이지 (히트맵·스트릭·유저 레벨·태그/난이도 분포)
 docs/                            # 프로젝트 문서 (기능별 설계/구현 기록)
-testcases/                       # AI 생성 테케 + AI 반례 폴백용 정답코드 캐시
+testcases/                       # AI 생성 테케 + AI 반례 폴백용 정답코드 캐시 (gitignore)
   {id}.json                      # generate-testcases 결과
   {id}_ref.json                  # AI 반례 폴백용 정답코드+입력생성기 캐시
-  ⚠ .gitignore에 규칙이 없어 실제로는 커밋 대상 — CLAUDE.md 원래 의도와 다름 (주의사항 참고)
 drafts/                          # 문제별 임시저장 코드 (gitignore, 완전 로컬 전용)
 reports/                         # 회귀 테스트 등 애드혹 리포트 (gitignore)
 ```
@@ -111,8 +110,6 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 `ANTHROPIC_API_KEY`가 없으면 AI 채점용 테케 생성(`/api/problems/{id}/generate-testcases`)과 AI 반례 탐색 폴백(`/api/problems/{id}/find-counterexample`)을 사용할 수 없다.
 
-**주의**: `requirements.txt`에 `anthropic`, `httpx`, `python-dotenv` 패키지가 빠져있다. `pip install -r requirements.txt`만으로는 위 두 기능과 testcase.ac 연동, `.env` 로딩이 전부 `ModuleNotFoundError`로 죽는다. 필요 시 별도로 `pip install anthropic httpx python-dotenv`.
-
 ---
 
 ## 웹 앱 아키텍처
@@ -141,7 +138,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 - **프론트**: Monaco Editor (CDN), 탭 UI (실행 / 제출)
   - **실행 탭**: 샘플 테케 + 커스텀 테케, 입력 대비 출력 정답 여부 확인
   - **제출 탭**: AI 생성 테케로 채점, 결과만 표시 (정답/오답/TLE/에러)
-  - **목록 페이지**: 즐겨찾기·풀이여부·풀고있는 문제(드래프트 존재) 필터, 각 필터는 URL 쿼리 파라미터와 동기화
+  - **목록 페이지**: 즐겨찾기·풀이여부·풀고있는 문제(드래프트 존재) 필터, 각 필터는 URL 쿼리 파라미터와 동기화. 헤더에 유저 레벨 미니 배지 상시 노출
   - **통계 페이지**: 유저 레벨 배지+진행률 바+레벨업 히스토리, 히트맵/스트릭, 난이도·태그 분포, 최근 풀이
 - **레이아웃**: 좌측 문제 목록/필터 + 우측 문제 설명/코드 에디터 스플릿
 
@@ -150,8 +147,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ## 주의사항
 
 - `all_problems/problems/`는 절대 수정하지 않는다 (원본 아카이브).
-- `problems.db`, `drafts/`, `reports/`는 gitignore 대상 (빌드 산출물/로컬 캐시).
-- `testcases/`는 로컬 캐시 용도이지만 **실제로는 gitignore 규칙이 없어 일부 파일이 이미 git에 커밋되어 있다** (예: `testcases/2167.json`). 의도와 실제 상태가 어긋난 상태이며, 별도 정리 작업 전까지는 이 상태 그대로.
+- `problems.db`, `drafts/`, `reports/`, `testcases/`는 gitignore 대상 (빌드 산출물/로컬 캐시).
 - `problem.json`의 `description`, `input`, `output` 필드는 HTML 문자열이므로 프론트에서 `innerHTML`로 렌더링한다.
 - 코드 실행(`/api/run`)과 AI 반례 폴백의 입력 생성기 실행은 전부 로컬 subprocess 기반 — 별도 샌드박스 없음, 로컬 전용 도구라는 전제.
 - 프로젝트 진행 상황/의사결정/트러블슈팅은 `docs/`에 기능별로 정리한다 (예: `docs/user-level-system.md`).
