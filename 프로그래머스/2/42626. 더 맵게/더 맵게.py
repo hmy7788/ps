@@ -1,25 +1,25 @@
 import heapq as hq
 
-def checking(scoville, K):
+def is_all_check(scoville, K):
     for s in scoville:
-        if(s < K):
+        if s < K:
             return False
     return True
 
 def solution(scoville, K):
+    cnt = 0
     hq.heapify(scoville)
-    count = 0
-    while(len(scoville) != 1):
-        if(checking(scoville, K)):
-            return count
-        else:
-            m1 = hq.heappop(scoville)
-            m2 = hq.heappop(scoville)
-            hq.heappush(scoville, m1 + 2*m2)
-            count += 1
+    
+    while len(scoville) != 1:
+        if is_all_check(scoville, K):
+            return cnt
         
-    if(checking(scoville, K)):
-        return count
-    else:
-        return -1
+        first = hq.heappop(scoville)
+        second = hq.heappop(scoville)
+        hq.heappush(scoville, first + 2*second)
         
+        cnt += 1
+        
+    if scoville[0] >= K:
+        return cnt
+    return -1
