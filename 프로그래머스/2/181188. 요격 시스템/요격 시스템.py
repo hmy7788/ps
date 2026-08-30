@@ -6,7 +6,7 @@ def solution(targets):
     
     for s, e in targets:
         if s >= last:
-            last = e-0.5
+            last = e
             cnt += 1
     
     return cnt
