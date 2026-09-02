@@ -8,3 +8,18 @@ run.ps1
 drafts/
 reports/
 testcases/
+docs/
+frontend/
+scripts/
+server/
+tests/
+학습/
+"바킹독의 실전 알고리즘"/
+CLAUDE.md
+create_shortcut.vbs
+"PS Platform Icon.ico"
+requirements.txt
+run.vbs
+setup.bat
+all_problems/
+.ruff_cache/
