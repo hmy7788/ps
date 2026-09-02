@@ -1,1 +1,0 @@
-solution = lambda numbers : [2*n for n in numbers]

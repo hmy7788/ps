@@ -1,1 +1,0 @@
-solution = lambda x, y : int((x / y) * 1000)

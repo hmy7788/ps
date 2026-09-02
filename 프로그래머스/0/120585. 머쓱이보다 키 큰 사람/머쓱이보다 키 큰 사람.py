@@ -1,1 +1,0 @@
-solution = lambda array, height : sum(1 for a in array if a > height)
